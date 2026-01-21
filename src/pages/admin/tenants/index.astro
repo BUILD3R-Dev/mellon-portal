@@ -1,0 +1,64 @@
+---
+import DashboardLayout from '../../../layouts/DashboardLayout.astro';
+import { TenantManagement } from '../../../components/admin/TenantManagement';
+import { db, tenants, tenantBranding } from '@/lib/db';
+import { eq } from 'drizzle-orm';
+
+// This page is protected by middleware
+const { user, memberships: userMemberships } = Astro.locals;
+
+// Verify user is agency admin
+const isAgencyAdmin = userMemberships?.some((m) => m.role === 'agency_admin' && m.tenantId === null);
+
+if (!isAgencyAdmin) {
+  return Astro.redirect('/dashboard');
+}
+
+// Fetch all tenants with their branding
+const allTenants = await db
+  .select({
+    id: tenants.id,
+    name: tenants.name,
+    status: tenants.status,
+    timezone: tenants.timezone,
+    createdAt: tenants.createdAt,
+    brandingId: tenantBranding.id,
+    themeId: tenantBranding.themeId,
+    accentColorOverride: tenantBranding.accentColorOverride,
+    tenantLogoUrl: tenantBranding.tenantLogoUrl,
+  })
+  .from(tenants)
+  .leftJoin(tenantBranding, eq(tenants.id, tenantBranding.tenantId))
+  .orderBy(tenants.name);
+
+// Transform data for the component
+const tenantsData = allTenants.map((t) => ({
+  id: t.id,
+  name: t.name,
+  status: t.status as 'active' | 'inactive' | 'suspended',
+  timezone: t.timezone,
+  createdAt: t.createdAt.toISOString(),
+  branding: t.brandingId
+    ? {
+        id: t.brandingId,
+        themeId: t.themeId || 'light',
+        accentColorOverride: t.accentColorOverride,
+        tenantLogoUrl: t.tenantLogoUrl,
+      }
+    : null,
+}));
+---
+
+<DashboardLayout title="Tenant Management">
+  <div class="space-y-6">
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900">Tenant Management</h1>
+      <p class="mt-1 text-gray-600">Manage franchise brand tenants and their branding configurations</p>
+    </div>
+
+    <TenantManagement
+      client:load
+      initialTenants={tenantsData}
+    />
+  </div>
+</DashboardLayout>

@@ -1,0 +1,80 @@
+---
+import DashboardLayout from '../../../../layouts/DashboardLayout.astro';
+import { BrandingForm } from '../../../../components/admin/branding/BrandingForm';
+import { db, tenants, tenantBranding } from '@/lib/db';
+import { eq } from 'drizzle-orm';
+
+// This page is protected by middleware
+const { user, memberships: userMemberships } = Astro.locals;
+
+// Verify user is agency admin
+const isAgencyAdmin = userMemberships?.some((m) => m.role === 'agency_admin' && m.tenantId === null);
+
+if (!isAgencyAdmin) {
+  return Astro.redirect('/dashboard');
+}
+
+// Get tenant ID from URL params
+const { id: tenantId } = Astro.params;
+
+if (!tenantId) {
+  return Astro.redirect('/admin/tenants');
+}
+
+// Fetch tenant with branding data
+const result = await db
+  .select({
+    id: tenants.id,
+    name: tenants.name,
+    status: tenants.status,
+    timezone: tenants.timezone,
+    brandingId: tenantBranding.id,
+    themeId: tenantBranding.themeId,
+    accentColorOverride: tenantBranding.accentColorOverride,
+    tenantLogoUrl: tenantBranding.tenantLogoUrl,
+  })
+  .from(tenants)
+  .leftJoin(tenantBranding, eq(tenants.id, tenantBranding.tenantId))
+  .where(eq(tenants.id, tenantId))
+  .limit(1);
+
+if (result.length === 0) {
+  return Astro.redirect('/admin/tenants');
+}
+
+const tenant = result[0];
+
+const brandingData = {
+  themeId: tenant.themeId || 'light',
+  accentColorOverride: tenant.accentColorOverride,
+  tenantLogoUrl: tenant.tenantLogoUrl,
+};
+---
+
+<DashboardLayout title={`Branding - ${tenant.name}`}>
+  <div class="space-y-6">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-sm text-gray-500">
+      <a href="/admin/dashboard" class="hover:text-gray-700">Admin</a>
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      </svg>
+      <a href="/admin/tenants" class="hover:text-gray-700">Tenants</a>
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      </svg>
+      <span class="text-gray-900 font-medium">{tenant.name}</span>
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      </svg>
+      <span class="text-gray-900">Branding</span>
+    </nav>
+
+    <BrandingForm
+      client:load
+      tenantId={tenantId}
+      initialData={brandingData}
+      tenantName={tenant.name}
+    />
+  </div>
+</DashboardLayout>

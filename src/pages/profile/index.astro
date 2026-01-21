@@ -1,0 +1,93 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { PersonalInfoForm } from '../../components/profile/PersonalInfoForm';
+import { PasswordChangeForm } from '../../components/profile/PasswordChangeForm';
+import { db, users } from '@/lib/db';
+import { eq } from 'drizzle-orm';
+
+// This page is protected by middleware
+const { user, isAuthenticated } = Astro.locals;
+
+if (!isAuthenticated || !user) {
+  return Astro.redirect('/login');
+}
+
+// Fetch full user data
+const [userData] = await db
+  .select({
+    id: users.id,
+    email: users.email,
+    name: users.name,
+    timezone: users.timezone,
+    createdAt: users.createdAt,
+    updatedAt: users.updatedAt,
+  })
+  .from(users)
+  .where(eq(users.id, user.id))
+  .limit(1);
+
+if (!userData) {
+  return Astro.redirect('/login');
+}
+
+// Transform for component
+const profileData = {
+  id: userData.id,
+  email: userData.email,
+  name: userData.name,
+  timezone: userData.timezone,
+  createdAt: userData.createdAt.toISOString(),
+  updatedAt: userData.updatedAt.toISOString(),
+};
+---
+
+<DashboardLayout title="Profile">
+  <div class="max-w-2xl mx-auto space-y-8">
+    <!-- Page Header -->
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900">Profile Settings</h1>
+      <p class="mt-1 text-gray-600">Manage your account settings and preferences</p>
+    </div>
+
+    <!-- Personal Information Section -->
+    <PersonalInfoForm client:load initialData={profileData} />
+
+    <!-- Password Section -->
+    <PasswordChangeForm client:load />
+
+    <!-- Account Info (read-only) -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6">
+      <h2 class="text-lg font-semibold text-gray-900 mb-1">Account Information</h2>
+      <p class="text-sm text-gray-500 mb-4">Read-only account details</p>
+
+      <dl class="space-y-4">
+        <div>
+          <dt class="text-sm font-medium text-gray-500">Account ID</dt>
+          <dd class="mt-1 text-sm text-gray-900 font-mono">{userData.id}</dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500">Account Created</dt>
+          <dd class="mt-1 text-sm text-gray-900">
+            {new Date(userData.createdAt).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500">Last Updated</dt>
+          <dd class="mt-1 text-sm text-gray-900">
+            {new Date(userData.updatedAt).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: 'numeric',
+            })}
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+</DashboardLayout>

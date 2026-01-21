@@ -1,0 +1,73 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { UserManagement } from '../../components/admin/UserManagement';
+import { db, users, memberships, tenants } from '@/lib/db';
+import { eq } from 'drizzle-orm';
+
+// This page is protected by middleware
+const { user, memberships: userMemberships } = Astro.locals;
+
+// Verify user is agency admin
+const isAgencyAdmin = userMemberships?.some((m) => m.role === 'agency_admin' && m.tenantId === null);
+
+if (!isAgencyAdmin) {
+  return Astro.redirect('/dashboard');
+}
+
+// Fetch all users with their memberships
+const allUsers = await db
+  .select({
+    id: users.id,
+    email: users.email,
+    name: users.name,
+    status: users.status,
+    createdAt: users.createdAt,
+    role: memberships.role,
+    tenantId: memberships.tenantId,
+    tenantName: tenants.name,
+  })
+  .from(users)
+  .leftJoin(memberships, eq(users.id, memberships.userId))
+  .leftJoin(tenants, eq(memberships.tenantId, tenants.id))
+  .orderBy(users.createdAt);
+
+// Fetch all tenants for the invite modal
+const allTenants = await db
+  .select({
+    id: tenants.id,
+    name: tenants.name,
+  })
+  .from(tenants)
+  .orderBy(tenants.name);
+
+// Transform data for the component
+const usersData = allUsers.map((u) => ({
+  id: u.id,
+  email: u.email,
+  name: u.name,
+  status: u.status,
+  role: u.role || 'unknown',
+  tenantName: u.tenantName,
+  createdAt: u.createdAt.toISOString(),
+}));
+
+const tenantsData = allTenants.map((t) => ({
+  id: t.id,
+  name: t.name,
+}));
+---
+
+<DashboardLayout title="User Management">
+  <div class="space-y-6">
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900">User Management</h1>
+      <p class="mt-1 text-gray-600">Manage users and send invitations</p>
+    </div>
+
+    <UserManagement
+      client:load
+      initialUsers={usersData}
+      tenants={tenantsData}
+    />
+  </div>
+</DashboardLayout>

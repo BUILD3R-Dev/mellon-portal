@@ -1,0 +1,114 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { RegistrationForm } from '../../components/forms/RegistrationForm';
+import { validateInviteToken } from '@/lib/invites';
+
+// Get token from query parameter
+const token = Astro.url.searchParams.get('token');
+
+// Validate token
+let tokenValid = false;
+let tokenExpired = false;
+let email = '';
+let role = '';
+let tenantName: string | undefined;
+
+if (token) {
+  const validation = await validateInviteToken(token);
+  tokenValid = validation.valid;
+  tokenExpired = validation.expired || false;
+
+  if (validation.valid && validation.user && validation.membership) {
+    email = validation.user.email;
+    role = validation.membership.role;
+    tenantName = validation.membership.tenantName || undefined;
+  }
+}
+---
+
+<Layout title="Complete Registration">
+  <main class="min-h-screen flex items-center justify-center bg-gray-50">
+    <div class="w-full max-w-md px-4">
+      {!token ? (
+        <!-- No token provided -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+          <div class="text-center">
+            <div class="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <svg class="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <h1 class="text-2xl font-semibold text-gray-900 mb-2">Invalid Link</h1>
+            <p class="text-gray-600 mb-6">
+              This invitation link is invalid. Please make sure you've copied the complete link from your invitation email.
+            </p>
+            <a
+              href="/login"
+              class="inline-block px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Go to login
+            </a>
+          </div>
+        </div>
+      ) : tokenExpired ? (
+        <!-- Token expired -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+          <div class="text-center">
+            <div class="mx-auto w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+              <svg class="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h1 class="text-2xl font-semibold text-gray-900 mb-2">Invitation Expired</h1>
+            <p class="text-gray-600 mb-6">
+              This invitation has expired. Please contact your administrator to request a new invitation.
+            </p>
+            <a
+              href="/login"
+              class="inline-block px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Go to login
+            </a>
+          </div>
+        </div>
+      ) : !tokenValid ? (
+        <!-- Invalid token -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+          <div class="text-center">
+            <div class="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <svg class="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <h1 class="text-2xl font-semibold text-gray-900 mb-2">Invalid Invitation</h1>
+            <p class="text-gray-600 mb-6">
+              This invitation link is no longer valid. It may have already been used or has expired.
+            </p>
+            <a
+              href="/login"
+              class="inline-block px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Go to login
+            </a>
+          </div>
+        </div>
+      ) : (
+        <!-- Valid token - show registration form -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+          <div class="text-center mb-8">
+            <h1 class="text-2xl font-semibold text-gray-900">Complete Your Registration</h1>
+            <p class="mt-2 text-gray-600">Set up your account to access Mellon Portal</p>
+          </div>
+
+          <RegistrationForm
+            client:load
+            token={token}
+            email={email}
+            role={role}
+            tenantName={tenantName}
+          />
+        </div>
+      )}
+    </div>
+  </main>
+</Layout>

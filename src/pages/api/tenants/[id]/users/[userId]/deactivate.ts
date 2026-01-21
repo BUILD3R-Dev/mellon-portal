@@ -1,0 +1,172 @@
+import type { APIRoute } from 'astro';
+import {
+  validateSession,
+  SESSION_COOKIE_NAME,
+  getUserMemberships,
+  requireTenantAdmin,
+  createUnauthorizedResponse,
+  deleteAllUserSessions,
+} from '@/lib/auth';
+import { db, users, memberships } from '@/lib/db';
+import { eq, and } from 'drizzle-orm';
+
+interface SuccessResponse {
+  success: true;
+  data: {
+    userId: string;
+    status: string;
+    sessionsInvalidated: number;
+  };
+}
+
+interface ErrorResponse {
+  success: false;
+  error: string;
+  code: string;
+}
+
+/**
+ * PATCH /api/tenants/[id]/users/[userId]/deactivate
+ *
+ * Deactivates a user (soft delete).
+ * Sets user status to 'inactive' and invalidates all their sessions.
+ * Requires Tenant Admin or Agency Admin role.
+ *
+ * Note: No email notification is sent (silent deactivation per requirements).
+ *
+ * Response:
+ * - 200: User deactivated successfully
+ * - 400: Validation error
+ * - 401: Unauthorized
+ * - 403: Forbidden
+ * - 404: User not found in tenant
+ */
+export const PATCH: APIRoute = async ({ cookies, params }) => {
+  try {
+    // Validate session
+    const sessionToken = cookies.get(SESSION_COOKIE_NAME)?.value;
+    if (!sessionToken) {
+      return createUnauthorizedResponse();
+    }
+
+    const session = await validateSession(sessionToken);
+    if (!session) {
+      return createUnauthorizedResponse('Invalid or expired session');
+    }
+
+    // Get IDs from params
+    const tenantId = params.id;
+    const targetUserId = params.userId;
+
+    if (!tenantId || !targetUserId) {
+      const response: ErrorResponse = {
+        success: false,
+        error: 'Tenant ID and User ID are required',
+        code: 'VALIDATION_ERROR',
+      };
+      return new Response(JSON.stringify(response), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check authorization - requires Tenant Admin or Agency Admin
+    const userMemberships = await getUserMemberships(session.userId);
+    const authResult = requireTenantAdmin(userMemberships, tenantId);
+
+    if (!authResult.isAuthorized) {
+      return authResult.errorResponse!;
+    }
+
+    // Prevent self-deactivation
+    if (targetUserId === session.userId) {
+      const response: ErrorResponse = {
+        success: false,
+        error: 'You cannot deactivate your own account',
+        code: 'VALIDATION_ERROR',
+      };
+      return new Response(JSON.stringify(response), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Verify the target user belongs to this tenant
+    const [membership] = await db
+      .select({
+        id: memberships.id,
+        userId: memberships.userId,
+        role: memberships.role,
+      })
+      .from(memberships)
+      .where(and(eq(memberships.userId, targetUserId), eq(memberships.tenantId, tenantId)))
+      .limit(1);
+
+    if (!membership) {
+      const response: ErrorResponse = {
+        success: false,
+        error: 'User not found in this tenant',
+        code: 'NOT_FOUND',
+      };
+      return new Response(JSON.stringify(response), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check if current user is trying to deactivate an agency admin (not allowed)
+    const targetMemberships = await getUserMemberships(targetUserId);
+    const isTargetAgencyAdmin = targetMemberships.some(
+      (m) => m.role === 'agency_admin' && m.tenantId === null
+    );
+
+    if (isTargetAgencyAdmin) {
+      const response: ErrorResponse = {
+        success: false,
+        error: 'Cannot deactivate an agency administrator through tenant management',
+        code: 'FORBIDDEN',
+      };
+      return new Response(JSON.stringify(response), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Update user status to inactive
+    await db
+      .update(users)
+      .set({
+        status: 'inactive',
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, targetUserId));
+
+    // Invalidate all user sessions
+    const sessionsInvalidated = await deleteAllUserSessions(targetUserId);
+
+    const response: SuccessResponse = {
+      success: true,
+      data: {
+        userId: targetUserId,
+        status: 'inactive',
+        sessionsInvalidated,
+      },
+    };
+
+    return new Response(JSON.stringify(response), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error deactivating user:', error);
+    const response: ErrorResponse = {
+      success: false,
+      error: 'An unexpected error occurred',
+      code: 'INTERNAL_ERROR',
+    };
+    return new Response(JSON.stringify(response), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+};
