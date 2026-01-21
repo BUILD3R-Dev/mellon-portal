@@ -18,7 +18,6 @@
     "test:auth": "vitest run --reporter=verbose src/lib/auth"
   },
   "dependencies": {
-    "vite": "^6.3.5",
     "@astrojs/node": "^9.5.2",
     "@astrojs/react": "^4.4.2",
     "@aws-sdk/client-ses": "^3.972.0",
@@ -29,6 +28,10 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-toast": "^1.2.15",
     "@tailwindcss/vite": "^4.1.18",
+    "@tiptap/extension-link": "^3.16.0",
+    "@tiptap/pm": "^3.16.0",
+    "@tiptap/react": "^3.16.0",
+    "@tiptap/starter-kit": "^3.16.0",
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
     "astro": "^5.16.11",
@@ -43,14 +46,17 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "tailwind-merge": "^3.4.0",
-    "tailwindcss": "^4.1.18",
-    "drizzle-kit": "^0.31.8",
-    "tsx": "^4.21.0"
+    "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^25.0.9",
     "@vitest/coverage-v8": "^4.0.17",
     "dotenv": "^17.2.3",
+    "drizzle-kit": "^0.31.8",
+    "jsdom": "^27.4.0",
+    "tsx": "^4.21.0",
     "vitest": "^4.0.17"
   }
 }

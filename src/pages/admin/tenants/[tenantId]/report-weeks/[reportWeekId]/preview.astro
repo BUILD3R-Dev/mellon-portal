@@ -1,0 +1,254 @@
+---
+/**
+ * Preview Page for Report Week Content
+ *
+ * Allows Agency Admins to preview report week content with tenant branding applied.
+ * Shows the report as it will appear to tenant users.
+ */
+import DashboardLayout from '../../../../../../layouts/DashboardLayout.astro';
+import { ReportSectionCard } from '@/components/reports/ReportSectionCard';
+import { db, tenants, tenantBranding } from '@/lib/db';
+import { eq } from 'drizzle-orm';
+import { formatWeekPeriod, getReportWeekById, getReportWeekManualByReportWeekId } from '@/lib/report-weeks';
+import { generateCSSRootBlock } from '@/lib/themes';
+
+// This page is protected by middleware
+const { user, memberships: userMemberships } = Astro.locals;
+
+// Verify user is agency admin
+const isAgencyAdmin = userMemberships?.some((m) => m.role === 'agency_admin' && m.tenantId === null);
+
+if (!isAgencyAdmin) {
+  return Astro.redirect('/dashboard');
+}
+
+// Get IDs from URL params
+const { tenantId, reportWeekId } = Astro.params;
+
+if (!tenantId || !reportWeekId) {
+  return Astro.redirect('/admin/tenants');
+}
+
+// Fetch tenant with branding
+const tenantResult = await db
+  .select({
+    id: tenants.id,
+    name: tenants.name,
+    timezone: tenants.timezone,
+    status: tenants.status,
+  })
+  .from(tenants)
+  .where(eq(tenants.id, tenantId))
+  .limit(1);
+
+if (tenantResult.length === 0) {
+  return Astro.redirect('/admin/tenants');
+}
+
+const tenant = tenantResult[0];
+
+// Fetch tenant branding
+let brandingData = null;
+let cssVariables = generateCSSRootBlock('light'); // Default to light theme
+
+const brandingResult = await db
+  .select({
+    tenantLogoUrl: tenantBranding.tenantLogoUrl,
+    themeId: tenantBranding.themeId,
+    accentColorOverride: tenantBranding.accentColorOverride,
+  })
+  .from(tenantBranding)
+  .where(eq(tenantBranding.tenantId, tenantId))
+  .limit(1);
+
+if (brandingResult.length > 0) {
+  brandingData = brandingResult[0];
+  cssVariables = generateCSSRootBlock(
+    brandingData.themeId || 'light',
+    brandingData.accentColorOverride
+  );
+}
+
+// Fetch report week
+const reportWeek = await getReportWeekById(reportWeekId, tenantId);
+
+if (!reportWeek) {
+  return Astro.redirect(`/admin/tenants/${tenantId}/report-weeks`);
+}
+
+// Fetch manual content
+const manual = await getReportWeekManualByReportWeekId(reportWeekId);
+
+// Format week period for display
+const periodStart = new Date(reportWeek.periodStartAt);
+const periodEnd = new Date(reportWeek.periodEndAt);
+const weekPeriod = formatWeekPeriod(periodStart, periodEnd);
+
+// Prepare content data
+const contentData = {
+  narrativeRich: manual?.narrativeRich || null,
+  initiativesRich: manual?.initiativesRich || null,
+  needsRich: manual?.needsRich || null,
+  discoveryDaysRich: manual?.discoveryDaysRich || null,
+};
+
+const tenantLogoUrl = brandingData?.tenantLogoUrl;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={`Report Preview - ${tenant.name}`} />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Preview: {weekPeriod} | {tenant.name}</title>
+    <!-- Inject CSS custom properties for tenant branding -->
+    <style set:html={cssVariables}></style>
+    <style>
+      /* Basic prose styling for rich text content */
+      .prose h1 { font-size: 1.5rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; }
+      .prose h2 { font-size: 1.25rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; }
+      .prose h3 { font-size: 1.125rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.25rem; }
+      .prose p { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+      .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+      .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+      .prose li { margin-top: 0.25rem; margin-bottom: 0.25rem; }
+      .prose a { color: var(--accent-color, #2563EB); text-decoration: underline; }
+      .prose a:hover { opacity: 0.8; }
+      .prose strong { font-weight: 600; }
+      .prose em { font-style: italic; }
+    </style>
+  </head>
+  <body class="min-h-screen flex flex-col" style="background-color: var(--background, #F9FAFB);">
+    <header class="sticky top-0 z-50 w-full border-b backdrop-blur supports-[backdrop-filter]:bg-white/60" style="background-color: var(--background-secondary, #FFFFFF); border-color: var(--border, #E5E7EB);">
+      <div class="container mx-auto flex h-16 items-center justify-between px-4">
+        <div class="flex items-center gap-4">
+          <!-- Tenant logo or name -->
+          {tenantLogoUrl ? (
+            <div class="flex items-center gap-3">
+              <img
+                src={tenantLogoUrl}
+                alt={`${tenant.name} logo`}
+                class="h-8 md:h-10 max-w-[160px] object-contain"
+              />
+            </div>
+          ) : (
+            <span class="text-xl font-semibold" style="color: var(--foreground, #111827);">
+              {tenant.name}
+            </span>
+          )}
+        </div>
+
+        <div class="flex items-center gap-3">
+          <!-- Preview badge -->
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+            Preview Mode
+          </span>
+          <!-- Status badge -->
+          <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+            reportWeek.status === 'published'
+              ? 'bg-green-100 text-green-800'
+              : 'bg-gray-100 text-gray-800'
+          }`}>
+            {reportWeek.status === 'published' ? 'Published' : 'Draft'}
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 flex-1">
+      <div class="max-w-4xl mx-auto space-y-6">
+        <!-- Report header -->
+        <div class="space-y-2">
+          <div class="flex items-center gap-2 text-sm" style="color: var(--foreground-muted, #6B7280);">
+            <a
+              href={`/admin/tenants/${tenantId}/report-weeks/${reportWeekId}/edit`}
+              class="hover:underline flex items-center gap-1"
+            >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Editor
+            </a>
+          </div>
+          <h1 class="text-2xl font-semibold" style="color: var(--foreground, #111827);">
+            Weekly Report
+          </h1>
+          <p class="text-lg" style="color: var(--foreground-muted, #6B7280);">
+            {weekPeriod}
+          </p>
+        </div>
+
+        <!-- Content sections -->
+        <div class="space-y-4">
+          <!-- Narrative Section -->
+          <ReportSectionCard
+            client:load
+            title="Narrative"
+            htmlContent={contentData.narrativeRich}
+            description="Weekly performance summary and key highlights"
+          />
+
+          <!-- Initiatives Section -->
+          <ReportSectionCard
+            client:load
+            title="Initiatives"
+            htmlContent={contentData.initiativesRich}
+            description="Current marketing initiatives and activities"
+          />
+
+          <!-- Needs From Client Section -->
+          <ReportSectionCard
+            client:load
+            title="Needs From Client"
+            htmlContent={contentData.needsRich}
+            description="Action items or requests for the client"
+          />
+
+          <!-- Discovery Days Section -->
+          <ReportSectionCard
+            client:load
+            title="Discovery Days"
+            htmlContent={contentData.discoveryDaysRich}
+            description="Discovery day activities and outcomes"
+          />
+        </div>
+
+        <!-- Empty state when no content -->
+        {!contentData.narrativeRich && !contentData.initiativesRich && !contentData.needsRich && !contentData.discoveryDaysRich && (
+          <div class="text-center py-12">
+            <div class="mx-auto w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+              <svg class="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <p class="text-gray-500">No content has been added to this report yet.</p>
+            <a
+              href={`/admin/tenants/${tenantId}/report-weeks/${reportWeekId}/edit`}
+              class="inline-flex items-center gap-2 mt-4 text-sm font-medium hover:underline"
+              style="color: var(--accent-color, #2563EB);"
+            >
+              Add content in the editor
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </a>
+          </div>
+        )}
+      </div>
+    </main>
+
+    <!-- Co-branded footer -->
+    <footer class="border-t py-6" style="background-color: var(--background-secondary, #FFFFFF); border-color: var(--border, #E5E7EB);">
+      <div class="container mx-auto px-4">
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div class="flex items-center gap-2">
+            <span class="text-sm" style="color: var(--foreground-muted, #6B7280);">Powered by</span>
+            <span class="text-sm font-semibold" style="color: var(--accent-color, #2563EB);">Mellon Franchising</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

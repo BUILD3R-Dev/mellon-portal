@@ -1,0 +1,157 @@
+---
+/**
+ * Published Report Detail Page
+ *
+ * Displays a single published report for tenant users.
+ * Requires tenant access and report must be published.
+ * Redirects to /reports if report is draft or not found.
+ */
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { ReportSectionCard } from '@/components/reports/ReportSectionCard';
+import { getReportWeekById, getReportWeekManualByReportWeekId, formatWeekPeriod } from '@/lib/report-weeks';
+
+// Get user and tenant context from middleware
+const { user, memberships, tenantId, isAgencyAdmin } = Astro.locals;
+
+// Require authenticated user with tenant context
+if (!user) {
+  return Astro.redirect('/login');
+}
+
+if (!tenantId) {
+  // No tenant context selected - redirect to workspace selection
+  return Astro.redirect('/select-workspace');
+}
+
+// Verify user has access to this tenant
+const hasTenantAccess = isAgencyAdmin || memberships?.some((m) => m.tenantId === tenantId);
+
+if (!hasTenantAccess) {
+  return Astro.redirect('/dashboard');
+}
+
+// Get report week ID from URL params
+const { reportWeekId } = Astro.params;
+
+if (!reportWeekId) {
+  return Astro.redirect('/reports');
+}
+
+// Fetch report week - must belong to user's tenant
+const reportWeek = await getReportWeekById(reportWeekId, tenantId);
+
+if (!reportWeek) {
+  // Report not found or doesn't belong to this tenant
+  return Astro.redirect('/reports');
+}
+
+// Redirect to reports list if report is still a draft
+if (reportWeek.status === 'draft') {
+  return Astro.redirect('/reports');
+}
+
+// Fetch manual content
+const manual = await getReportWeekManualByReportWeekId(reportWeekId);
+
+// Format week period for display
+const periodStart = new Date(reportWeek.periodStartAt);
+const periodEnd = new Date(reportWeek.periodEndAt);
+const weekPeriod = formatWeekPeriod(periodStart, periodEnd);
+
+// Prepare content data
+const contentData = {
+  narrativeRich: manual?.narrativeRich || null,
+  initiativesRich: manual?.initiativesRich || null,
+  needsRich: manual?.needsRich || null,
+  discoveryDaysRich: manual?.discoveryDaysRich || null,
+};
+
+// Find tenant name from memberships
+const currentMembership = memberships?.find((m) => m.tenantId === tenantId);
+const tenantName = currentMembership?.tenant?.name || 'Your Organization';
+---
+
+<DashboardLayout title={`Report - ${weekPeriod}`}>
+  <div class="max-w-4xl mx-auto space-y-6">
+    <!-- Back link and page header -->
+    <div class="space-y-2">
+      <div class="flex items-center gap-2 text-sm text-gray-500">
+        <a
+          href="/reports"
+          class="hover:text-gray-700 flex items-center gap-1"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Back to Reports
+        </a>
+      </div>
+      <h1 class="text-2xl font-semibold text-gray-900">Weekly Report</h1>
+      <p class="text-lg text-gray-600">{weekPeriod}</p>
+    </div>
+
+    <!-- Content sections -->
+    <div class="space-y-4">
+      <!-- Narrative Section -->
+      <ReportSectionCard
+        client:load
+        title="Narrative"
+        htmlContent={contentData.narrativeRich}
+        description="Weekly performance summary and key highlights"
+      />
+
+      <!-- Initiatives Section -->
+      <ReportSectionCard
+        client:load
+        title="Initiatives"
+        htmlContent={contentData.initiativesRich}
+        description="Current marketing initiatives and activities"
+      />
+
+      <!-- Needs From Client Section -->
+      <ReportSectionCard
+        client:load
+        title="Needs From Client"
+        htmlContent={contentData.needsRich}
+        description="Action items or requests for the client"
+      />
+
+      <!-- Discovery Days Section -->
+      <ReportSectionCard
+        client:load
+        title="Discovery Days"
+        htmlContent={contentData.discoveryDaysRich}
+        description="Discovery day activities and outcomes"
+      />
+    </div>
+
+    <!-- Empty state when no content -->
+    {!contentData.narrativeRich && !contentData.initiativesRich && !contentData.needsRich && !contentData.discoveryDaysRich && (
+      <div class="text-center py-12">
+        <div class="mx-auto w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+          <svg class="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <p class="text-gray-500">No content available for this report.</p>
+      </div>
+    )}
+  </div>
+</DashboardLayout>
+
+<style>
+  /* Prose styling for rich text content */
+  :global(.prose) {
+    h1 { font-size: 1.5rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; }
+    h2 { font-size: 1.25rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; }
+    h3 { font-size: 1.125rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.25rem; }
+    p { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+    ul { list-style-type: disc; padding-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+    ol { list-style-type: decimal; padding-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+    li { margin-top: 0.25rem; margin-bottom: 0.25rem; }
+    a { color: var(--accent-color, #2563EB); text-decoration: underline; }
+    a:hover { opacity: 0.8; }
+    strong { font-weight: 600; }
+    em { font-style: italic; }
+  }
+</style>

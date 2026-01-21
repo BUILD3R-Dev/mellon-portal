@@ -395,7 +395,7 @@ export function TenantDetail({ tenant: initialTenant, users }: TenantDetailProps
       {/* Related Settings Links */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Settings</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <a
             href={`/admin/tenants/${tenant.id}/branding`}
             className="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-all"
@@ -408,6 +408,21 @@ export function TenantDetail({ tenant: initialTenant, users }: TenantDetailProps
             <div>
               <p className="font-medium text-gray-900">Branding Settings</p>
               <p className="text-sm text-gray-500">Theme and logo configuration</p>
+            </div>
+          </a>
+
+          <a
+            href={`/admin/tenants/${tenant.id}/report-weeks`}
+            className="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-all"
+          >
+            <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+              <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-medium text-gray-900">Report Weeks</p>
+              <p className="text-sm text-gray-500">Manage weekly reporting periods</p>
             </div>
           </a>
 
