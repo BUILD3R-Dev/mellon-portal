@@ -18,6 +18,7 @@
     "test:auth": "vitest run --reporter=verbose src/lib/auth"
   },
   "dependencies": {
+    "vite": "^6.3.5",
     "@astrojs/node": "^9.5.2",
     "@astrojs/react": "^4.4.2",
     "@aws-sdk/client-ses": "^3.972.0",
