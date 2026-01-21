@@ -43,14 +43,14 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "tailwind-merge": "^3.4.0",
-    "tailwindcss": "^4.1.18"
+    "tailwindcss": "^4.1.18",
+    "drizzle-kit": "^0.31.8",
+    "tsx": "^4.21.0"
   },
   "devDependencies": {
     "@types/node": "^25.0.9",
     "@vitest/coverage-v8": "^4.0.17",
     "dotenv": "^17.2.3",
-    "drizzle-kit": "^0.31.8",
-    "tsx": "^4.21.0",
     "vitest": "^4.0.17"
   }
 }

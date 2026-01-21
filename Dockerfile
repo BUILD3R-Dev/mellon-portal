@@ -35,7 +35,7 @@ COPY --from=builder /app/src/lib/db ./src/lib/db
 # Create startup script
 RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'echo "Running database migrations..."' >> /app/start.sh && \
-    echo 'npx drizzle-kit push --config=drizzle.config.ts || echo "Migration warning (may already be applied)"' >> /app/start.sh && \
+    echo 'node ./node_modules/drizzle-kit/bin.cjs push --config=drizzle.config.ts || echo "Migration warning (may already be applied)"' >> /app/start.sh && \
     echo 'echo "Starting application..."' >> /app/start.sh && \
     echo 'exec node ./dist/server/entry.mjs' >> /app/start.sh && \
     chmod +x /app/start.sh
