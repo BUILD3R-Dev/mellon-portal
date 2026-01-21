@@ -15,15 +15,15 @@
 
 ## Milestone 2: Report Weeks & Manual Content
 
-11. [ ] Report Week Data Model — Define schema for report weeks with start/end dates, status (draft/published), and tenant association `S`
-12. [ ] Report Week CRUD — Build interface for agency admins to create, list, and manage report weeks per tenant with date validation `M`
-13. [ ] Draft/Publish Workflow — Implement status transitions with publish action that locks the report week from further edits `S`
-14. [ ] Rich Text Editor Integration — Add rich text editor component for authoring weekly narrative content with formatting support `M`
-15. [ ] Weekly Narrative Section — Build editable narrative field on report week with autosave and preview functionality `S`
-16. [ ] Initiatives Section — Add initiatives field for listing current marketing initiatives with bullet point formatting `S`
-17. [ ] Needs From Client Section — Add field for agency to communicate action items or requests to the client `S`
-18. [ ] Report Week Preview — Build preview page showing all manual content sections as they will appear to clients `S`
-19. [ ] Published Report View — Create read-only view of published report weeks with all content sections for tenant users `M`
+11. [x] Report Week Data Model — Define schema for report weeks with start/end dates, status (draft/published), and tenant association `S`
+12. [x] Report Week CRUD — Build interface for agency admins to create, list, and manage report weeks per tenant with date validation `M`
+13. [x] Draft/Publish Workflow — Implement status transitions with publish action that locks the report week from further edits `S`
+14. [x] Rich Text Editor Integration — Add rich text editor component for authoring weekly narrative content with formatting support `M`
+15. [x] Weekly Narrative Section — Build editable narrative field on report week with autosave and preview functionality `S`
+16. [x] Initiatives Section — Add initiatives field for listing current marketing initiatives with bullet point formatting `S`
+17. [x] Needs From Client Section — Add field for agency to communicate action items or requests to the client `S`
+18. [x] Report Week Preview — Build preview page showing all manual content sections as they will appear to clients `S`
+19. [x] Published Report View — Create read-only view of published report weeks with all content sections for tenant users `M`
 
 ## Milestone 3: Data Sync & Dashboards
 

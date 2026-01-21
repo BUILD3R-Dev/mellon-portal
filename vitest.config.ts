@@ -4,6 +4,7 @@ import path from 'path';
 export default defineConfig({
   test: {
     globals: true,
+    // Default environment - will be overridden for .tsx files
     environment: 'node',
     include: ['src/**/*.test.ts', 'src/**/*.spec.ts', 'src/**/*.test.tsx', 'src/**/*.spec.tsx'],
     exclude: ['node_modules', 'dist'],
@@ -13,6 +14,13 @@ export default defineConfig({
       include: ['src/lib/**/*.ts'],
       exclude: ['**/*.test.ts', '**/*.spec.ts', '**/*.test.tsx', '**/*.spec.tsx'],
     },
+    // Use jsdom for React component tests (.tsx files) and hooks tests
+    environmentMatchGlobs: [
+      ['src/**/*.test.tsx', 'jsdom'],
+      ['src/**/*.spec.tsx', 'jsdom'],
+      ['src/hooks/**/*.test.ts', 'jsdom'],
+    ],
+    setupFiles: ['./vitest.setup.ts'],
   },
   resolve: {
     alias: {

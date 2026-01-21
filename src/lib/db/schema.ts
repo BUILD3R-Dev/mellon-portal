@@ -11,6 +11,7 @@ import {
   boolean,
   pgEnum,
   index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
 // Enums
@@ -105,7 +106,10 @@ export const reportWeekManual = pgTable('report_week_manual', {
   needsRich: text('needs_rich'),
   discoveryDaysRich: text('discovery_days_rich'),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => [
+  // Unique constraint to ensure one-to-one relationship
+  uniqueIndex('report_week_manual_report_week_id_idx').on(table.reportWeekId),
+]);
 
 // Sync Tables
 export const syncRuns = pgTable('sync_runs', {

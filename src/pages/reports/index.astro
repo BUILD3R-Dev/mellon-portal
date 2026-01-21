@@ -1,0 +1,58 @@
+---
+/**
+ * Reports List Page
+ *
+ * Displays a list of published reports for the current tenant user.
+ * Features the "Latest Report" prominently at the top.
+ * Requires authenticated user with tenant membership.
+ */
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { ReportsList } from '@/components/reports/ReportsList';
+import { getReportWeeksForTenant, formatWeekPeriod } from '@/lib/report-weeks';
+
+// Get user and tenant context from middleware
+const { user, memberships, tenantId, isAgencyAdmin } = Astro.locals;
+
+// Require authenticated user with tenant context
+if (!user) {
+  return Astro.redirect('/login');
+}
+
+if (!tenantId) {
+  // No tenant context selected - redirect to workspace selection
+  return Astro.redirect('/select-workspace');
+}
+
+// Verify user has access to this tenant
+const hasTenantAccess = isAgencyAdmin || memberships?.some((m) => m.tenantId === tenantId);
+
+if (!hasTenantAccess) {
+  return Astro.redirect('/dashboard');
+}
+
+// Fetch published reports for this tenant
+const reportWeeks = await getReportWeeksForTenant(tenantId, { status: 'published' });
+
+// Format reports for the component
+const reports = reportWeeks.map((rw) => ({
+  id: rw.id,
+  weekEndingDate: rw.weekEndingDate,
+  periodStartAt: rw.periodStartAt.toISOString(),
+  periodEndAt: rw.periodEndAt.toISOString(),
+  weekPeriod: formatWeekPeriod(rw.periodStartAt, rw.periodEndAt),
+  status: rw.status,
+}));
+---
+
+<DashboardLayout title="Reports">
+  <div class="max-w-4xl mx-auto space-y-6">
+    <!-- Page header -->
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900">Reports</h1>
+      <p class="mt-1 text-gray-600">View your weekly marketing reports</p>
+    </div>
+
+    <!-- Reports list -->
+    <ReportsList client:load reports={reports} />
+  </div>
+</DashboardLayout>

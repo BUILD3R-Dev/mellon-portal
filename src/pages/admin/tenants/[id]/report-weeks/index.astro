@@ -1,0 +1,98 @@
+---
+import DashboardLayout from '../../../../../layouts/DashboardLayout.astro';
+import { ReportWeekList } from '../../../../../components/admin/ReportWeekList';
+import { db, tenants, reportWeeks } from '@/lib/db';
+import { eq, desc } from 'drizzle-orm';
+import { formatWeekPeriod } from '@/lib/report-weeks';
+
+// This page is protected by middleware
+const { user, memberships: userMemberships } = Astro.locals;
+
+// Verify user is agency admin
+const isAgencyAdmin = userMemberships?.some((m) => m.role === 'agency_admin' && m.tenantId === null);
+
+if (!isAgencyAdmin) {
+  return Astro.redirect('/dashboard');
+}
+
+// Get tenant ID from URL params
+const { id: tenantId } = Astro.params;
+
+if (!tenantId) {
+  return Astro.redirect('/admin/tenants');
+}
+
+// Fetch tenant
+const tenantResult = await db
+  .select({
+    id: tenants.id,
+    name: tenants.name,
+    timezone: tenants.timezone,
+    status: tenants.status,
+  })
+  .from(tenants)
+  .where(eq(tenants.id, tenantId))
+  .limit(1);
+
+if (tenantResult.length === 0) {
+  return Astro.redirect('/admin/tenants');
+}
+
+const tenant = tenantResult[0];
+
+// Fetch report weeks for this tenant
+const reportWeeksResult = await db
+  .select()
+  .from(reportWeeks)
+  .where(eq(reportWeeks.tenantId, tenantId))
+  .orderBy(desc(reportWeeks.weekEndingDate));
+
+// Format report weeks for the component
+const reportWeeksData = reportWeeksResult.map((rw) => {
+  const periodStart = new Date(rw.periodStartAt);
+  const periodEnd = new Date(rw.periodEndAt);
+
+  return {
+    id: rw.id,
+    tenantId: rw.tenantId,
+    weekEndingDate: rw.weekEndingDate,
+    periodStartAt: rw.periodStartAt.toISOString(),
+    periodEndAt: rw.periodEndAt.toISOString(),
+    weekPeriod: formatWeekPeriod(periodStart, periodEnd),
+    status: rw.status as 'draft' | 'published',
+    publishedAt: rw.publishedAt?.toISOString() || null,
+    publishedBy: rw.publishedBy,
+    createdAt: rw.createdAt.toISOString(),
+    updatedAt: rw.updatedAt.toISOString(),
+  };
+});
+---
+
+<DashboardLayout title={`Report Weeks - ${tenant.name}`}>
+  <div class="space-y-6">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-sm text-gray-500">
+      <a href="/admin/dashboard" class="hover:text-gray-700">Admin</a>
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      </svg>
+      <a href="/admin/tenants" class="hover:text-gray-700">Tenants</a>
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      </svg>
+      <a href={`/admin/tenants/${tenant.id}`} class="hover:text-gray-700">{tenant.name}</a>
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      </svg>
+      <span class="text-gray-900 font-medium">Report Weeks</span>
+    </nav>
+
+    <ReportWeekList
+      client:load
+      tenantId={tenant.id}
+      tenantName={tenant.name}
+      tenantTimezone={tenant.timezone}
+      initialReportWeeks={reportWeeksData}
+    />
+  </div>
+</DashboardLayout>

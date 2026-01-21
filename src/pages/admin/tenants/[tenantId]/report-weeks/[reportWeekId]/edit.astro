@@ -1,0 +1,120 @@
+---
+import DashboardLayout from '../../../../../../layouts/DashboardLayout.astro';
+import { ContentEditorForm } from '../../../../../../components/admin/content/ContentEditorForm';
+import { db, tenants, reportWeeks, reportWeekManual } from '@/lib/db';
+import { eq } from 'drizzle-orm';
+import { formatWeekPeriod, getReportWeekById, getReportWeekManualByReportWeekId } from '@/lib/report-weeks';
+
+// This page is protected by middleware
+const { user, memberships: userMemberships } = Astro.locals;
+
+// Verify user is agency admin
+const isAgencyAdmin = userMemberships?.some((m) => m.role === 'agency_admin' && m.tenantId === null);
+
+if (!isAgencyAdmin) {
+  return Astro.redirect('/dashboard');
+}
+
+// Get IDs from URL params
+const { tenantId, reportWeekId } = Astro.params;
+
+if (!tenantId || !reportWeekId) {
+  return Astro.redirect('/admin/tenants');
+}
+
+// Fetch tenant
+const tenantResult = await db
+  .select({
+    id: tenants.id,
+    name: tenants.name,
+    timezone: tenants.timezone,
+    status: tenants.status,
+  })
+  .from(tenants)
+  .where(eq(tenants.id, tenantId))
+  .limit(1);
+
+if (tenantResult.length === 0) {
+  return Astro.redirect('/admin/tenants');
+}
+
+const tenant = tenantResult[0];
+
+// Fetch report week
+const reportWeek = await getReportWeekById(reportWeekId, tenantId);
+
+if (!reportWeek) {
+  return Astro.redirect(`/admin/tenants/${tenantId}/report-weeks`);
+}
+
+// Fetch manual content
+const manual = await getReportWeekManualByReportWeekId(reportWeekId);
+
+// Format week period for display
+const periodStart = new Date(reportWeek.periodStartAt);
+const periodEnd = new Date(reportWeek.periodEndAt);
+const weekPeriod = formatWeekPeriod(periodStart, periodEnd);
+
+// Prepare initial data for the form
+const initialData = {
+  narrativeRich: manual?.narrativeRich || null,
+  initiativesRich: manual?.initiativesRich || null,
+  needsRich: manual?.needsRich || null,
+};
+---
+
+<DashboardLayout title={`Edit Report Week - ${weekPeriod}`}>
+  <div class="space-y-6">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-sm text-gray-500">
+      <a href="/admin/dashboard" class="hover:text-gray-700">Admin</a>
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      </svg>
+      <a href="/admin/tenants" class="hover:text-gray-700">Tenants</a>
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      </svg>
+      <a href={`/admin/tenants/${tenant.id}`} class="hover:text-gray-700">{tenant.name}</a>
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      </svg>
+      <a href={`/admin/tenants/${tenant.id}/report-weeks`} class="hover:text-gray-700">Report Weeks</a>
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      </svg>
+      <span class="text-gray-900 font-medium">{weekPeriod}</span>
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      </svg>
+      <span class="text-gray-900 font-medium">Edit</span>
+    </nav>
+
+    <!-- Page header -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold text-gray-900">Edit Report Week Content</h1>
+        <p class="mt-1 text-gray-600">{weekPeriod} - {tenant.name}</p>
+      </div>
+      <a
+        href={`/admin/tenants/${tenant.id}/report-weeks`}
+        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+      >
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to Report Weeks
+      </a>
+    </div>
+
+    <!-- Content editor form -->
+    <ContentEditorForm
+      client:load
+      reportWeekId={reportWeek.id}
+      tenantId={tenant.id}
+      initialData={initialData}
+      status={reportWeek.status}
+      weekPeriod={weekPeriod}
+    />
+  </div>
+</DashboardLayout>
