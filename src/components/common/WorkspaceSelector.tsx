@@ -71,7 +71,7 @@ export function WorkspaceSelector({
 
   const handleSelectTenant = async (tenantId: string) => {
     // Set the tenant cookie and redirect
-    document.cookie = `mellon_tenant_id=${tenantId}; path=/; max-age=${60 * 60 * 24 * 365}`; // 1 year
+    document.cookie = `mellon_tenant=${tenantId}; path=/; max-age=${60 * 60 * 24 * 30}`; // 30 days
 
     // Redirect to dashboard with the selected tenant
     window.location.href = '/dashboard';
@@ -79,7 +79,7 @@ export function WorkspaceSelector({
 
   const handleGoToAdmin = () => {
     // Clear tenant cookie and go to admin
-    document.cookie = 'mellon_tenant_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie = 'mellon_tenant=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     window.location.href = '/admin/dashboard';
   };
 
