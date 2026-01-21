@@ -1,0 +1,134 @@
+---
+/**
+ * Pipeline Dashboard Page
+ *
+ * Displays pipeline metrics with KPI cards and stage breakdown chart.
+ * Shows total pipeline value, stage count, and average deal size.
+ */
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import { SyncStatusBanner } from '../components/dashboard/SyncStatusBanner';
+import { KPICard } from '../components/dashboard/KPICard';
+import { HorizontalBarChart } from '../components/dashboard/HorizontalBarChart';
+import { db, pipelineStageCounts, hotListItems } from '@/lib/db';
+import { eq, sql } from 'drizzle-orm';
+
+// Get tenant context from locals (set by middleware)
+const { tenantId } = Astro.locals;
+
+// Query pipeline stage counts for current tenant
+let stageCounts: Array<{
+  stage: string;
+  count: number | null;
+}> = [];
+
+// Query hot list items for pipeline value calculation
+let pipelineValue = 0;
+let dealCount = 0;
+
+if (tenantId) {
+  try {
+    stageCounts = await db
+      .select({
+        stage: pipelineStageCounts.stage,
+        count: pipelineStageCounts.count,
+      })
+      .from(pipelineStageCounts)
+      .where(eq(pipelineStageCounts.tenantId, tenantId));
+
+    // Calculate total pipeline value from hot list items
+    const pipelineData = await db
+      .select({
+        totalValue: sql<string>`COALESCE(SUM(${hotListItems.weightedIff}), 0)`,
+        totalCount: sql<number>`COUNT(*)`,
+      })
+      .from(hotListItems)
+      .where(eq(hotListItems.tenantId, tenantId));
+
+    if (pipelineData.length > 0) {
+      pipelineValue = parseFloat(pipelineData[0].totalValue) || 0;
+      dealCount = pipelineData[0].totalCount || 0;
+    }
+  } catch (error) {
+    console.error('Error fetching pipeline data:', error);
+  }
+}
+
+// Prepare chart data
+const chartData = stageCounts.map((s) => ({
+  stage: s.stage,
+  count: s.count || 0,
+}));
+
+const stageCount = stageCounts.length;
+const averageDealSize = dealCount > 0 ? pipelineValue / dealCount : 0;
+
+// Format currency
+function formatCurrency(num: number): string {
+  if (num >= 1000000) {
+    return `$${(num / 1000000).toFixed(1)}M`;
+  } else if (num >= 1000) {
+    return `$${(num / 1000).toFixed(1)}K`;
+  }
+  return `$${num.toLocaleString()}`;
+}
+
+// Format number
+function formatNumber(num: number): string {
+  return num.toLocaleString();
+}
+---
+
+<DashboardLayout title="Pipeline">
+  <div class="space-y-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold text-gray-900">Pipeline Dashboard</h1>
+        <p class="mt-1 text-gray-600">Track your sales pipeline progress and stage breakdown.</p>
+      </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <KPICard
+        client:load
+        label="Total Pipeline Value"
+        value={formatCurrency(pipelineValue)}
+        subtitle="Weighted"
+      />
+      <KPICard
+        client:load
+        label="Pipeline Stages"
+        value={formatNumber(stageCount)}
+        subtitle="Active stages"
+      />
+      <KPICard
+        client:load
+        label="Average Deal Size"
+        value={formatCurrency(averageDealSize)}
+        subtitle="Per opportunity"
+      />
+    </div>
+
+    <!-- Stage Breakdown Chart -->
+    <div class="grid grid-cols-1 gap-6">
+      {chartData.length > 0 ? (
+        <HorizontalBarChart
+          client:load
+          data={chartData}
+          title="Opportunities by Stage"
+          height={Math.max(300, chartData.length * 50)}
+        />
+      ) : (
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 class="text-lg font-semibold text-gray-900 mb-4">Opportunities by Stage</h2>
+          <div class="h-64 flex items-center justify-center text-gray-400">
+            No pipeline data available
+          </div>
+        </div>
+      )}
+    </div>
+
+    <!-- Data Freshness Banner -->
+    <SyncStatusBanner client:load />
+  </div>
+</DashboardLayout>

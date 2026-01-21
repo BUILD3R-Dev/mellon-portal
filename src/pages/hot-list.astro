@@ -1,0 +1,149 @@
+---
+/**
+ * Hot List Dashboard Page
+ *
+ * Displays prioritized hot list items with key details and status indicators.
+ * Ordered by weighted IFF descending to show highest value opportunities first.
+ */
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import { SyncStatusBanner } from '../components/dashboard/SyncStatusBanner';
+import { db, hotListItems } from '@/lib/db';
+import { eq, desc } from 'drizzle-orm';
+
+// Get tenant context from locals (set by middleware)
+const { tenantId } = Astro.locals;
+
+// Query hot list items for current tenant
+let items: Array<{
+  id: string;
+  candidateName: string;
+  market: string | null;
+  units: number | null;
+  weightedIff: string | null;
+  stage: string | null;
+  likelyPct: number | null;
+}> = [];
+
+if (tenantId) {
+  try {
+    items = await db
+      .select({
+        id: hotListItems.id,
+        candidateName: hotListItems.candidateName,
+        market: hotListItems.market,
+        units: hotListItems.units,
+        weightedIff: hotListItems.weightedIff,
+        stage: hotListItems.stage,
+        likelyPct: hotListItems.likelyPct,
+      })
+      .from(hotListItems)
+      .where(eq(hotListItems.tenantId, tenantId))
+      .orderBy(desc(hotListItems.weightedIff));
+  } catch (error) {
+    console.error('Error fetching hot list items:', error);
+  }
+}
+
+// Format currency
+function formatCurrency(value: string | null): string {
+  if (!value) return '$0';
+  const num = parseFloat(value);
+  if (isNaN(num)) return '$0';
+  return `$${num.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
+// Get stage badge colors
+function getStageBadgeClass(stage: string | null): string {
+  if (!stage) return 'bg-gray-100 text-gray-800';
+
+  const stageLower = stage.toLowerCase();
+  if (stageLower.includes('hot') || stageLower.includes('close')) {
+    return 'bg-red-100 text-red-800';
+  } else if (stageLower.includes('warm') || stageLower.includes('qualified')) {
+    return 'bg-amber-100 text-amber-800';
+  } else if (stageLower.includes('cold') || stageLower.includes('new')) {
+    return 'bg-blue-100 text-blue-800';
+  } else if (stageLower.includes('won') || stageLower.includes('complete')) {
+    return 'bg-green-100 text-green-800';
+  } else if (stageLower.includes('lost') || stageLower.includes('dead')) {
+    return 'bg-gray-100 text-gray-800';
+  }
+  return 'bg-purple-100 text-purple-800';
+}
+---
+
+<DashboardLayout title="Hot List">
+  <div class="space-y-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold text-gray-900">Hot List</h1>
+        <p class="mt-1 text-gray-600">Prioritized candidates ordered by weighted IFF value.</p>
+      </div>
+    </div>
+
+    <!-- Hot List Table -->
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      {items.length > 0 ? (
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Candidate Name
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Market
+                </th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Units
+                </th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Weighted IFF
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Stage
+                </th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Likely %
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              {items.map((item) => (
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {item.candidateName}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {item.market || '-'}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                    {item.units ?? 0}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
+                    {formatCurrency(item.weightedIff)}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStageBadgeClass(item.stage)}`}>
+                      {item.stage || 'Unknown'}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                    {item.likelyPct ?? 0}%
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div class="p-8 text-center text-gray-500">
+          No hot list items available
+        </div>
+      )}
+    </div>
+
+    <!-- Data Freshness Banner -->
+    <SyncStatusBanner client:load />
+  </div>
+</DashboardLayout>

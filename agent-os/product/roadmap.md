@@ -27,19 +27,19 @@
 
 ## Milestone 3: Data Sync & Dashboards
 
-20. [ ] ClientTether API Client — Build typed API client for fetching leads, pipeline, hot list, notes, and schedule data from ClientTether `M`
-21. [ ] Raw Snapshot Storage — Store raw API responses with timestamps for audit trail and debugging purposes `S`
-22. [ ] Normalized Data Tables — Define and migrate tables for leads, pipeline_items, hot_list_items, notes, and scheduled_activities `M`
-23. [ ] Sync Worker Implementation — Build Node.js worker that runs hourly to fetch and normalize ClientTether data per tenant `L`
-24. [ ] Sync Status Tracking — Track last successful sync time per tenant and display freshness indicator in UI `S`
-25. [ ] Sync Error Handling — Implement retry logic with exponential backoff and error logging for failed syncs `S`
-26. [ ] Cached Fallback Display — Serve dashboard data from local database when sync fails, with warning banner showing data age `S`
-27. [ ] Leads Dashboard — Build dashboard view showing lead counts, sources, and status breakdown with ECharts visualizations `M`
-28. [ ] Pipeline Dashboard — Create pipeline view with stage breakdown, values, and progression charts `M`
-29. [ ] Hot List View — Display prioritized hot list items with key details and status indicators `S`
-30. [ ] Notes View — Show recent notes and communications with filtering and search capabilities `M`
-31. [ ] Schedule View — Display scheduled activities and appointments in list and calendar formats `M`
-32. [ ] Dashboard Navigation — Build tabbed navigation between dashboard views with active state and deep linking `S`
+20. [x] ClientTether API Client — Build typed API client for fetching leads, pipeline, hot list, notes, and schedule data from ClientTether `M`
+21. [x] Raw Snapshot Storage — Store raw API responses with timestamps for audit trail and debugging purposes `S`
+22. [x] Normalized Data Tables — Define and migrate tables for leads, pipeline_items, hot_list_items, notes, and scheduled_activities `M`
+23. [x] Sync Worker Implementation — Build Node.js worker that runs hourly to fetch and normalize ClientTether data per tenant `L`
+24. [x] Sync Status Tracking — Track last successful sync time per tenant and display freshness indicator in UI `S`
+25. [x] Sync Error Handling — Implement retry logic with exponential backoff and error logging for failed syncs `S`
+26. [x] Cached Fallback Display — Serve dashboard data from local database when sync fails, with warning banner showing data age `S`
+27. [x] Leads Dashboard — Build dashboard view showing lead counts, sources, and status breakdown with ECharts visualizations `M`
+28. [x] Pipeline Dashboard — Create pipeline view with stage breakdown, values, and progression charts `M`
+29. [x] Hot List View — Display prioritized hot list items with key details and status indicators `S`
+30. [x] Notes View — Show recent notes and communications with filtering and search capabilities `M`
+31. [x] Schedule View — Display scheduled activities and appointments in list and calendar formats `M`
+32. [x] Dashboard Navigation — Build tabbed navigation between dashboard views with active state and deep linking `S`
 
 ## Milestone 4: Reports History & PDF Export
 

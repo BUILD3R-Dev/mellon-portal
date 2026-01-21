@@ -14,6 +14,50 @@ const { title } = Astro.props;
 // Get user and tenant info from locals (set by auth middleware)
 const { user, memberships, tenantId, isAgencyAdmin } = Astro.locals;
 
+// Get current pathname for active state highlighting
+const currentPath = Astro.url.pathname;
+
+/**
+ * Check if a nav link is active based on current path
+ * Handles exact matches and prefix matches for nested routes
+ */
+function isNavActive(linkPath: string): boolean {
+  if (linkPath === '/dashboard') {
+    // Dashboard should only match exactly
+    return currentPath === '/dashboard';
+  }
+  // Other routes match if path starts with the link path
+  return currentPath === linkPath || currentPath.startsWith(`${linkPath}/`);
+}
+
+/**
+ * Get classes for nav link based on active state
+ */
+function getNavLinkClasses(linkPath: string, isMobile: boolean = false): string {
+  const isActive = isNavActive(linkPath);
+
+  if (isMobile) {
+    if (isActive) {
+      return 'block px-3 py-2 text-base font-medium rounded-lg transition-colors';
+    }
+    return 'block px-3 py-2 text-base font-medium rounded-lg transition-colors';
+  }
+
+  return 'text-sm font-medium transition-colors hover:opacity-80';
+}
+
+/**
+ * Get inline style for nav link based on active state
+ */
+function getNavLinkStyle(linkPath: string, isMobile: boolean = false): string {
+  const isActive = isNavActive(linkPath);
+
+  if (isActive) {
+    return 'color: var(--accent-color, #2563EB); font-weight: 600;';
+  }
+  return 'color: var(--foreground-muted, #6B7280);';
+}
+
 // Find current tenant name if in tenant context
 const currentMembership = memberships?.find((m) => m.tenantId === tenantId);
 const tenantName = currentMembership?.tenant?.name || null;
@@ -136,17 +180,19 @@ const tenantLogoUrl = tenantBrandingData?.tenantLogoUrl;
         </div>
 
         <nav class="hidden md:flex items-center gap-6">
-          <a href="/dashboard" class="text-sm font-medium transition-colors hover:opacity-80" style="color: var(--foreground-muted, #6B7280);">Dashboard</a>
-          <a href="/reports" class="text-sm font-medium transition-colors hover:opacity-80" style="color: var(--foreground-muted, #6B7280);">Reports</a>
-          <a href="/leads" class="text-sm font-medium transition-colors hover:opacity-80" style="color: var(--foreground-muted, #6B7280);">Leads</a>
-          <a href="/pipeline" class="text-sm font-medium transition-colors hover:opacity-80" style="color: var(--foreground-muted, #6B7280);">Pipeline</a>
-          <a href="/hot-list" class="text-sm font-medium transition-colors hover:opacity-80" style="color: var(--foreground-muted, #6B7280);">Hot List</a>
+          <a href="/dashboard" class={getNavLinkClasses('/dashboard')} style={getNavLinkStyle('/dashboard')}>Dashboard</a>
+          <a href="/reports" class={getNavLinkClasses('/reports')} style={getNavLinkStyle('/reports')}>Reports</a>
+          <a href="/leads" class={getNavLinkClasses('/leads')} style={getNavLinkStyle('/leads')}>Leads</a>
+          <a href="/pipeline" class={getNavLinkClasses('/pipeline')} style={getNavLinkStyle('/pipeline')}>Pipeline</a>
+          <a href="/hot-list" class={getNavLinkClasses('/hot-list')} style={getNavLinkStyle('/hot-list')}>Hot List</a>
+          <a href="/notes" class={getNavLinkClasses('/notes')} style={getNavLinkStyle('/notes')}>Notes</a>
+          <a href="/schedule" class={getNavLinkClasses('/schedule')} style={getNavLinkStyle('/schedule')}>Schedule</a>
           {isAgencyAdmin && (
             <>
               <span class="h-4 w-px" style="background-color: var(--border, #E5E7EB);"></span>
-              <a href="/admin/tenants" class="text-sm font-medium transition-colors hover:opacity-80" style="color: var(--foreground-muted, #6B7280);">Tenants</a>
-              <a href="/admin/users" class="text-sm font-medium transition-colors hover:opacity-80" style="color: var(--foreground-muted, #6B7280);">Users</a>
-              <a href="/admin/dashboard" class="text-sm font-medium transition-colors hover:opacity-80" style="color: var(--foreground-muted, #6B7280);">Admin</a>
+              <a href="/admin/tenants" class={getNavLinkClasses('/admin/tenants')} style={getNavLinkStyle('/admin/tenants')}>Tenants</a>
+              <a href="/admin/users" class={getNavLinkClasses('/admin/users')} style={getNavLinkStyle('/admin/users')}>Users</a>
+              <a href="/admin/dashboard" class={getNavLinkClasses('/admin/dashboard')} style={getNavLinkStyle('/admin/dashboard')}>Admin</a>
             </>
           )}
         </nav>
@@ -282,19 +328,21 @@ const tenantLogoUrl = tenantBrandingData?.tenantLogoUrl;
       <!-- Mobile navigation menu -->
       <div id="mobile-menu" class="hidden md:hidden border-t" style="border-color: var(--border, #E5E7EB);">
         <div class="px-4 py-3 space-y-1">
-          <a href="/dashboard" class="block px-3 py-2 text-base font-medium rounded-lg transition-colors" style="color: var(--foreground-muted, #6B7280);">Dashboard</a>
-          <a href="/reports" class="block px-3 py-2 text-base font-medium rounded-lg transition-colors" style="color: var(--foreground-muted, #6B7280);">Reports</a>
-          <a href="/leads" class="block px-3 py-2 text-base font-medium rounded-lg transition-colors" style="color: var(--foreground-muted, #6B7280);">Leads</a>
-          <a href="/pipeline" class="block px-3 py-2 text-base font-medium rounded-lg transition-colors" style="color: var(--foreground-muted, #6B7280);">Pipeline</a>
-          <a href="/hot-list" class="block px-3 py-2 text-base font-medium rounded-lg transition-colors" style="color: var(--foreground-muted, #6B7280);">Hot List</a>
+          <a href="/dashboard" class={getNavLinkClasses('/dashboard', true)} style={getNavLinkStyle('/dashboard', true)}>Dashboard</a>
+          <a href="/reports" class={getNavLinkClasses('/reports', true)} style={getNavLinkStyle('/reports', true)}>Reports</a>
+          <a href="/leads" class={getNavLinkClasses('/leads', true)} style={getNavLinkStyle('/leads', true)}>Leads</a>
+          <a href="/pipeline" class={getNavLinkClasses('/pipeline', true)} style={getNavLinkStyle('/pipeline', true)}>Pipeline</a>
+          <a href="/hot-list" class={getNavLinkClasses('/hot-list', true)} style={getNavLinkStyle('/hot-list', true)}>Hot List</a>
+          <a href="/notes" class={getNavLinkClasses('/notes', true)} style={getNavLinkStyle('/notes', true)}>Notes</a>
+          <a href="/schedule" class={getNavLinkClasses('/schedule', true)} style={getNavLinkStyle('/schedule', true)}>Schedule</a>
           <div class="my-2 border-t" style="border-color: var(--border, #E5E7EB);"></div>
-          <a href="/profile" class="block px-3 py-2 text-base font-medium rounded-lg transition-colors" style="color: var(--foreground-muted, #6B7280);">Profile</a>
+          <a href="/profile" class={getNavLinkClasses('/profile', true)} style={getNavLinkStyle('/profile', true)}>Profile</a>
           {isAgencyAdmin && (
             <>
               <div class="my-2 border-t" style="border-color: var(--border, #E5E7EB);"></div>
-              <a href="/admin/tenants" class="block px-3 py-2 text-base font-medium rounded-lg transition-colors" style="color: var(--foreground-muted, #6B7280);">Tenants</a>
-              <a href="/admin/users" class="block px-3 py-2 text-base font-medium rounded-lg transition-colors" style="color: var(--foreground-muted, #6B7280);">Users</a>
-              <a href="/admin/dashboard" class="block px-3 py-2 text-base font-medium rounded-lg transition-colors" style="color: var(--foreground-muted, #6B7280);">Admin</a>
+              <a href="/admin/tenants" class={getNavLinkClasses('/admin/tenants', true)} style={getNavLinkStyle('/admin/tenants', true)}>Tenants</a>
+              <a href="/admin/users" class={getNavLinkClasses('/admin/users', true)} style={getNavLinkStyle('/admin/users', true)}>Users</a>
+              <a href="/admin/dashboard" class={getNavLinkClasses('/admin/dashboard', true)} style={getNavLinkStyle('/admin/dashboard', true)}>Admin</a>
             </>
           )}
         </div>

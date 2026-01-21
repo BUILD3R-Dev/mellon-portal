@@ -12,6 +12,11 @@ const PROTECTED_ROUTES = [
   '/reports',
   '/select-workspace',
   '/profile',
+  '/leads',
+  '/pipeline',
+  '/hot-list',
+  '/notes',
+  '/schedule',
 ];
 
 /**
@@ -22,7 +27,7 @@ const AGENCY_ADMIN_ROUTES = ['/admin'];
 /**
  * Routes that require a tenant context (selected workspace)
  */
-const TENANT_REQUIRED_ROUTES = ['/dashboard', '/reports'];
+const TENANT_REQUIRED_ROUTES = ['/dashboard', '/reports', '/leads', '/pipeline', '/hot-list', '/notes', '/schedule'];
 
 /**
  * Check if a path matches any protected route pattern

@@ -176,6 +176,37 @@ export const hotListItems = pgTable('hot_list_items', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+// ClientTether Notes Table
+export const ctNotes = pgTable('ct_notes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  contactId: varchar('contact_id', { length: 255 }),
+  noteDate: timestamp('note_date').notNull(),
+  author: varchar('author', { length: 255 }),
+  content: text('content'),
+  rawJson: jsonb('raw_json'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => [
+  index('ct_notes_tenant_id_idx').on(table.tenantId),
+  index('ct_notes_note_date_idx').on(table.noteDate),
+]);
+
+// ClientTether Scheduled Activities Table
+export const ctScheduledActivities = pgTable('ct_scheduled_activities', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  activityType: varchar('activity_type', { length: 100 }),
+  scheduledAt: timestamp('scheduled_at').notNull(),
+  contactName: varchar('contact_name', { length: 255 }),
+  description: text('description'),
+  status: varchar('status', { length: 100 }),
+  rawJson: jsonb('raw_json'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => [
+  index('ct_scheduled_activities_tenant_id_idx').on(table.tenantId),
+  index('ct_scheduled_activities_scheduled_at_idx').on(table.scheduledAt),
+]);
+
 // Optional Tables
 export const reportExports = pgTable('report_exports', {
   id: uuid('id').primaryKey().defaultRandom(),
