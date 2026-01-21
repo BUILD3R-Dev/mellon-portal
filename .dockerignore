@@ -31,6 +31,10 @@ docs
 agent-os
 .claude
 
+# Keep drizzle files (needed for migrations)
+!drizzle.config.ts
+!drizzle/
+
 # Misc
 .DS_Store
 *.log
