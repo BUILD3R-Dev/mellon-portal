@@ -89,8 +89,8 @@ async function normalizeLeadMetrics(db: any, tenantId: string, leads: CTLeadResp
   const byStatus = new Map<string, number>();
 
   for (const lead of leads) {
-    const source = lead.source || 'Unknown';
-    const status = lead.status || 'Unknown';
+    const source = lead.clients_lead_source || lead.source || 'Unknown';
+    const status = lead.clients_sales_cycle || lead.status || 'Unknown';
     bySource.set(source, (bySource.get(source) || 0) + 1);
     byStatus.set(status, (byStatus.get(status) || 0) + 1);
   }
@@ -123,9 +123,10 @@ async function normalizePipelineStages(db: any, tenantId: string, opportunities:
   const stageDollarValues = new Map<string, number>();
 
   for (const opp of opportunities) {
-    const stage = opp.stage || 'Unknown';
+    const stage = opp.contact_sales_cycle || opp.stage || 'Unknown';
+    const dollarValue = parseFloat(opp.deal_size || '0') || opp.value || 0;
     stageGroups.set(stage, (stageGroups.get(stage) || 0) + 1);
-    stageDollarValues.set(stage, (stageDollarValues.get(stage) || 0) + (opp.value || 0));
+    stageDollarValues.set(stage, (stageDollarValues.get(stage) || 0) + dollarValue);
   }
 
   const rows: any[] = [];
@@ -151,16 +152,26 @@ async function normalizePipelineStages(db: any, tenantId: string, opportunities:
 async function normalizeHotListItems(db: any, tenantId: string, opportunities: CTOpportunityResponse[]): Promise<number> {
   await db.delete(schema.hotListItems).where(eq(schema.hotListItems.tenantId, tenantId));
 
-  const hotItems = opportunities.filter((opp) => (opp.probability || 0) >= 50);
+  // Hot list stages: Discovery Day Booked (50%), Discovery Day Completed (80%),
+  // FA Requested (90%), FA Sent (95%), FA Signed (100%)
+  const HOT_STAGES = ['Discovery Day Booked', 'Discovery Day Completed', 'FA Requested', 'FA Sent', 'FA Signed'];
+  const hotItems = opportunities.filter((opp) => {
+    const stage = opp.contact_sales_cycle || opp.stage || '';
+    return HOT_STAGES.includes(stage);
+  });
   if (hotItems.length === 0) return 0;
 
-  const rows = hotItems.map((opp) => ({
-    tenantId,
-    candidateName: opp.title || 'Unknown',
-    stage: opp.stage || 'Unknown',
-    likelyPct: opp.probability || 0,
-    rawJson: JSON.stringify(opp),
-  }));
+  const rows = hotItems.map((opp) => {
+    const stage = opp.contact_sales_cycle || opp.stage || 'Unknown';
+    const name = [opp.firstName, opp.lastName].filter(Boolean).join(' ') || opp.title || 'Unknown';
+    return {
+      tenantId,
+      candidateName: name,
+      stage,
+      likelyPct: opp.probability || 0,
+      rawJson: JSON.stringify(opp),
+    };
+  });
 
   await db.insert(schema.hotListItems).values(rows);
   return rows.length;
@@ -176,10 +187,10 @@ async function normalizeNotes(db: any, tenantId: string, notes: CTNoteResponse[]
 
   const rows = notes.map((note) => ({
     tenantId,
-    contactId: note.contact_id,
+    contactId: note.contact_id || note.id,
     noteDate: new Date(note.date),
-    author: note.author,
-    content: note.content,
+    author: note.author || '',
+    content: note.content || '',
     rawJson: JSON.stringify(note),
   }));
 

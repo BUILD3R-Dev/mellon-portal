@@ -14,27 +14,43 @@ interface ApiResponse<T> {
  */
 
 export interface CTLeadResponse {
-  id: string;
-  first_name?: string;
-  last_name?: string;
+  client_id: string;
+  firstName?: string;
+  lastName?: string;
+  compName?: string;
   email?: string;
   phone?: string;
+  clients_lead_source?: string;
+  clients_sales_cycle?: string;
+  deal_size?: string;
+  created?: string;
+  last_modified_date?: string;
+  contact_type?: string;
+  assigned_user?: string;
+  clients_action_plan?: string;
+  // Legacy aliases for backwards compatibility
+  id?: string;
   source?: string;
   status?: string;
-  created_at?: string;
-  modified_at?: string;
 }
 
 export interface CTOpportunityResponse {
-  id: string;
-  lead_id?: string;
+  opportunity_id: string;
+  firstName?: string;
+  lastName?: string;
+  compName?: string;
+  contact_sales_cycle?: string;
+  deal_size?: string;
+  created?: string;
+  last_modified_date?: string;
+  contact_lead_source?: string;
+  contact_action_plan?: string;
+  // Legacy aliases
+  id?: string;
   title?: string;
   value?: number;
   stage?: string;
   probability?: number;
-  expected_close_date?: string;
-  created_at?: string;
-  modified_at?: string;
 }
 
 export interface CTNoteResponse {

@@ -160,8 +160,8 @@ async function normalizeLeadMetrics(
   const statusGroups = new Map<string, number>();
 
   for (const lead of leads) {
-    const source = lead.source || 'unknown';
-    const status = lead.status || 'unknown';
+    const source = lead.clients_lead_source || lead.source || 'unknown';
+    const status = lead.clients_sales_cycle || lead.status || 'unknown';
 
     sourceGroups.set(source, (sourceGroups.get(source) || 0) + 1);
     statusGroups.set(status, (statusGroups.get(status) || 0) + 1);
@@ -214,9 +214,10 @@ export async function normalizePipelineStages(
   const stageDollarValues = new Map<string, number>();
 
   for (const opp of opportunities) {
-    const stage = opp.stage || 'unknown';
+    const stage = opp.contact_sales_cycle || opp.stage || 'unknown';
+    const dollarVal = parseFloat(opp.deal_size || '0') || opp.value || 0;
     stageGroups.set(stage, (stageGroups.get(stage) || 0) + 1);
-    stageDollarValues.set(stage, (stageDollarValues.get(stage) || 0) + (opp.value || 0));
+    stageDollarValues.set(stage, (stageDollarValues.get(stage) || 0) + dollarVal);
   }
 
   let recordsUpdated = 0;
