@@ -60,13 +60,13 @@ export class ClientTetherClient {
   private webKey?: string;
 
   constructor(config: ClientTetherConfig) {
-    this.apiUrl = config.apiUrl;
+    this.apiUrl = config.apiUrl.replace(/\/+$/, '');
     this.accessToken = config.accessToken;
     this.webKey = config.webKey;
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
-    const url = `${this.apiUrl}${endpoint}`;
+    const url = `${this.apiUrl}/v2/api/${endpoint}`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-Access-Token': this.accessToken,
@@ -86,32 +86,23 @@ export class ClientTetherClient {
       }
 
       const data = await response.json();
-      return { data };
+      // CT API wraps results in a "data" key
+      return { data: data.data ?? data };
     } catch (error) {
       return { data: null as T, error: `Network Error: ${error}` };
     }
   }
 
   async getLeads(params?: { modifiedSince?: string }): Promise<ApiResponse<CTLeadResponse[]>> {
-    const queryParams = new URLSearchParams();
-    if (params?.modifiedSince) {
-      queryParams.set('modified_since', params.modifiedSince);
-    }
-    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    return this.request<CTLeadResponse[]>(`/leads${query}`);
+    return this.request<CTLeadResponse[]>('read_client_list');
   }
 
   async getOpportunities(params?: { modifiedSince?: string }): Promise<ApiResponse<CTOpportunityResponse[]>> {
-    const queryParams = new URLSearchParams();
-    if (params?.modifiedSince) {
-      queryParams.set('modified_since', params.modifiedSince);
-    }
-    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    return this.request<CTOpportunityResponse[]>(`/opportunities${query}`);
+    return this.request<CTOpportunityResponse[]>('read_opportunity_list');
   }
 
   async getSalesCycles(): Promise<ApiResponse<unknown[]>> {
-    return this.request<unknown[]>('/sales-cycles');
+    return this.request<unknown[]>('read_sales_cycle_list');
   }
 
   async getEvents(params?: { startDate?: string; endDate?: string }): Promise<ApiResponse<unknown[]>> {
@@ -119,23 +110,21 @@ export class ClientTetherClient {
     if (params?.startDate) queryParams.set('start_date', params.startDate);
     if (params?.endDate) queryParams.set('end_date', params.endDate);
     const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    return this.request<unknown[]>(`/events${query}`);
+    return this.request<unknown[]>(`read_sales_cycle_any_activity${query}`);
   }
 
   async getNotes(params?: { contactId?: string; since?: string }): Promise<ApiResponse<CTNoteResponse[]>> {
-    const queryParams = new URLSearchParams();
-    if (params?.contactId) queryParams.set('contact_id', params.contactId);
-    if (params?.since) queryParams.set('since', params.since);
-    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    return this.request<CTNoteResponse[]>(`/notes${query}`);
+    if (params?.contactId) {
+      return this.request<CTNoteResponse[]>(`read_client_history_notes/${params.contactId}`);
+    }
+    // Without a contact ID, we can't fetch notes (CT API requires it)
+    return { data: [], error: undefined };
   }
 
   async getScheduledActivities(params?: { startDate?: string; endDate?: string }): Promise<ApiResponse<CTActivityResponse[]>> {
-    const queryParams = new URLSearchParams();
-    if (params?.startDate) queryParams.set('start_date', params.startDate);
-    if (params?.endDate) queryParams.set('end_date', params.endDate);
-    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    return this.request<CTActivityResponse[]>(`/activities${query}`);
+    // CT API doesn't have a direct scheduled activities list endpoint
+    // Return empty for now - activities come through contact history
+    return { data: [], error: undefined };
   }
 }
 
