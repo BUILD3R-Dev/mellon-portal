@@ -9,3 +9,4 @@ export { LeadsChart, type LeadsChartProps, type LeadsChartDataPoint } from './Le
 export { PieChart, type PieChartProps, type PieChartDataPoint } from './PieChart';
 export { HorizontalBarChart, type HorizontalBarChartProps, type HorizontalBarChartDataPoint } from './HorizontalBarChart';
 export { DataTable, StatusBadge, type DataTableProps, type DataTableColumn } from './DataTable';
+export { DashboardIsland } from './DashboardIsland';

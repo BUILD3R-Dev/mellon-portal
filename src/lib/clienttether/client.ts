@@ -69,7 +69,7 @@ export class ClientTetherClient {
     const url = `${this.apiUrl}${endpoint}`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${this.accessToken}`,
+      'X-Access-Token': this.accessToken,
       ...(this.webKey && { 'X-Web-Key': this.webKey }),
       ...(options.headers as Record<string, string>),
     };
@@ -139,13 +139,13 @@ export class ClientTetherClient {
   }
 }
 
-export function createClientTetherClient(webKey?: string): ClientTetherClient {
+export function createClientTetherClient(webKey?: string, accessToken?: string): ClientTetherClient {
   const apiUrl = process.env.CLIENTTETHER_API_URL || 'https://api.clienttether.com';
-  const accessToken = process.env.CLIENTTETHER_ACCESS_TOKEN || '';
+  const resolvedAccessToken = accessToken || process.env.CLIENTTETHER_ACCESS_TOKEN || '';
 
   return new ClientTetherClient({
     apiUrl,
-    accessToken,
+    accessToken: resolvedAccessToken,
     webKey,
   });
 }

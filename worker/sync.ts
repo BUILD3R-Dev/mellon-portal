@@ -13,6 +13,7 @@
  * 2. For each tenant, sync leads, opportunities, notes, and activities
  * 3. Store raw snapshots and update normalized tables
  * 4. Log sync status and any errors
+ * 5. On Sundays, create weekly snapshots linked to reportWeeks
  */
 
 import 'dotenv/config';
@@ -47,6 +48,7 @@ interface TenantRecord {
   id: string;
   name: string;
   clienttetherWebKey: string | null;
+  clienttetherAccessToken: string | null;
   status: 'active' | 'inactive' | 'suspended';
 }
 
@@ -129,7 +131,13 @@ export async function fetchWithRetry<T>(
 
 export async function getTenantsWithWebKey(db: Database): Promise<TenantRecord[]> {
   const tenants = await db
-    .select()
+    .select({
+      id: schema.tenants.id,
+      name: schema.tenants.name,
+      clienttetherWebKey: schema.tenants.clienttetherWebKey,
+      clienttetherAccessToken: schema.tenants.clienttetherAccessToken,
+      status: schema.tenants.status,
+    })
     .from(schema.tenants)
     .where(
       and(
@@ -196,17 +204,19 @@ async function normalizeLeadMetrics(
   return recordsUpdated;
 }
 
-async function normalizePipelineStages(
+export async function normalizePipelineStages(
   db: Database,
   tenantId: string,
   opportunities: CTOpportunityResponse[]
 ) {
-  // Group opportunities by stage
+  // Group opportunities by stage, tracking both count and dollar value
   const stageGroups = new Map<string, number>();
+  const stageDollarValues = new Map<string, number>();
 
   for (const opp of opportunities) {
     const stage = opp.stage || 'unknown';
     stageGroups.set(stage, (stageGroups.get(stage) || 0) + 1);
+    stageDollarValues.set(stage, (stageDollarValues.get(stage) || 0) + (opp.value || 0));
   }
 
   let recordsUpdated = 0;
@@ -221,12 +231,14 @@ async function normalizePipelineStages(
       )
     );
 
-  // Insert stage counts
+  // Insert stage counts with dollar values
   for (const [stage, count] of stageGroups) {
+    const dollarValue = stageDollarValues.get(stage) || 0;
     await db.insert(schema.pipelineStageCounts).values({
       tenantId,
       stage,
       count,
+      dollarValue: String(dollarValue),
     });
     recordsUpdated++;
   }
@@ -330,11 +342,78 @@ async function normalizeScheduledActivities(
   return recordsUpdated;
 }
 
+/**
+ * Creates a weekly snapshot by copying current live rows (reportWeekId IS NULL)
+ * from leadMetrics and pipelineStageCounts into report-week-linked rows.
+ */
+export async function createWeeklySnapshot(
+  db: Database,
+  tenantId: string,
+  reportWeekId: string
+): Promise<number> {
+  let snapshotCount = 0;
+
+  // Read current live leadMetrics rows for this tenant
+  const liveLeadMetrics = await db
+    .select()
+    .from(schema.leadMetrics)
+    .where(
+      and(
+        eq(schema.leadMetrics.tenantId, tenantId),
+        isNull(schema.leadMetrics.reportWeekId)
+      )
+    );
+
+  // Insert copies linked to the report week
+  for (const row of liveLeadMetrics) {
+    await db.insert(schema.leadMetrics).values({
+      tenantId: row.tenantId,
+      reportWeekId,
+      dimensionType: row.dimensionType,
+      dimensionValue: row.dimensionValue,
+      clicks: row.clicks,
+      impressions: row.impressions,
+      cost: row.cost,
+      leads: row.leads,
+      qualifiedLeads: row.qualifiedLeads,
+    });
+    snapshotCount++;
+  }
+
+  // Read current live pipelineStageCounts rows for this tenant
+  const livePipelineStages = await db
+    .select()
+    .from(schema.pipelineStageCounts)
+    .where(
+      and(
+        eq(schema.pipelineStageCounts.tenantId, tenantId),
+        isNull(schema.pipelineStageCounts.reportWeekId)
+      )
+    );
+
+  // Insert copies linked to the report week
+  for (const row of livePipelineStages) {
+    await db.insert(schema.pipelineStageCounts).values({
+      tenantId: row.tenantId,
+      reportWeekId,
+      stage: row.stage,
+      count: row.count,
+      dollarValue: row.dollarValue,
+    });
+    snapshotCount++;
+  }
+
+  return snapshotCount;
+}
+
 // Main sync function for a single tenant
-async function syncTenant(db: Database, tenant: TenantRecord): Promise<number> {
+export async function syncTenant(db: Database, tenant: TenantRecord): Promise<number> {
   console.log(`  Syncing tenant: ${tenant.name} (${tenant.id})`);
 
-  const client = createClientTetherClient(tenant.clienttetherWebKey!);
+  const client = createClientTetherClient(
+    tenant.clienttetherWebKey!,
+    tenant.clienttetherAccessToken ?? undefined
+  );
   let totalRecords = 0;
 
   // Fetch leads with retry
@@ -372,6 +451,54 @@ async function syncTenant(db: Database, tenant: TenantRecord): Promise<number> {
 
   console.log(`    Completed: ${totalRecords} records updated`);
   return totalRecords;
+}
+
+/**
+ * Finds or creates a reportWeeks row for the given tenant and week ending date (Sunday).
+ * Returns the reportWeekId.
+ */
+async function findOrCreateReportWeek(
+  db: Database,
+  tenantId: string,
+  weekEndingDate: Date
+): Promise<string> {
+  const dateStr = weekEndingDate.toISOString().split('T')[0];
+
+  // Check if a report week already exists for this tenant and date
+  const existing = await db
+    .select()
+    .from(schema.reportWeeks)
+    .where(
+      and(
+        eq(schema.reportWeeks.tenantId, tenantId),
+        eq(schema.reportWeeks.weekEndingDate, dateStr)
+      )
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    return existing[0].id;
+  }
+
+  // Calculate period start (Monday) and period end (Sunday 23:59:59)
+  const periodStart = new Date(weekEndingDate);
+  periodStart.setDate(periodStart.getDate() - 6);
+  periodStart.setHours(0, 0, 0, 0);
+
+  const periodEnd = new Date(weekEndingDate);
+  periodEnd.setHours(23, 59, 59, 999);
+
+  const [reportWeek] = await db
+    .insert(schema.reportWeeks)
+    .values({
+      tenantId,
+      weekEndingDate: dateStr,
+      periodStartAt: periodStart,
+      periodEndAt: periodEnd,
+    })
+    .returning();
+
+  return reportWeek.id;
 }
 
 // Main sync execution
@@ -412,6 +539,15 @@ async function runSync() {
 
         // Update sync run to success
         await updateSyncRunStatus(db, syncRun.id, 'success', { recordsUpdated });
+
+        // Create weekly snapshot on Sundays (end of Monday-Sunday week)
+        const today = new Date();
+        if (today.getDay() === 0) {
+          console.log(`    Sunday detected - creating weekly snapshot for ${tenant.name}`);
+          const reportWeekId = await findOrCreateReportWeek(db, tenant.id, today);
+          const snapshotCount = await createWeeklySnapshot(db, tenant.id, reportWeekId);
+          console.log(`    Weekly snapshot created: ${snapshotCount} rows`);
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`  ERROR syncing tenant ${tenant.name}: ${errorMessage}`);

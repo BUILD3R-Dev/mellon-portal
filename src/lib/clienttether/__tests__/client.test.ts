@@ -120,4 +120,61 @@ describe('ClientTether API Client', () => {
       expect(headers['X-Web-Key']).toBeUndefined();
     });
   });
+
+  describe('auth header format', () => {
+    it('sends X-Access-Token header instead of Authorization Bearer', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve([]),
+      });
+
+      const client = new ClientTetherClient(mockConfig);
+      await client.getLeads();
+
+      const fetchCall = vi.mocked(global.fetch).mock.calls[0];
+      const headers = (fetchCall[1] as RequestInit).headers as Record<string, string>;
+
+      expect(headers['X-Access-Token']).toBe('test-access-token');
+      expect(headers['Authorization']).toBeUndefined();
+    });
+
+    it('sends X-Web-Key header when webKey is provided alongside X-Access-Token', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve([]),
+      });
+
+      const client = new ClientTetherClient(mockConfig);
+      await client.getLeads();
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'X-Access-Token': 'test-access-token',
+            'X-Web-Key': 'test-web-key',
+          }),
+        })
+      );
+    });
+  });
+
+  describe('createClientTetherClient', () => {
+    it('accepts and uses a per-tenant accessToken parameter', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve([]),
+      });
+
+      const tenantToken = 'tenant-specific-token';
+      const client = createClientTetherClient('tenant-web-key', tenantToken);
+      await client.getLeads();
+
+      const fetchCall = vi.mocked(global.fetch).mock.calls[0];
+      const headers = (fetchCall[1] as RequestInit).headers as Record<string, string>;
+
+      expect(headers['X-Access-Token']).toBe(tenantToken);
+      expect(headers['X-Web-Key']).toBe('tenant-web-key');
+    });
+  });
 });

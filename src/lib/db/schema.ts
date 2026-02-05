@@ -28,6 +28,7 @@ export const tenants = pgTable('tenants', {
   timezone: varchar('timezone', { length: 100 }).notNull().default('America/New_York'),
   status: tenantStatusEnum('status').notNull().default('active'),
   clienttetherWebKey: text('clienttether_web_key'),
+  clienttetherAccessToken: text('clienttether_access_token'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -148,7 +149,10 @@ export const leadMetrics = pgTable('lead_metrics', {
   leads: integer('leads').default(0),
   qualifiedLeads: integer('qualified_leads').default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+}, (table) => [
+  index('lead_metrics_tenant_id_idx').on(table.tenantId),
+  index('lead_metrics_report_week_id_idx').on(table.reportWeekId),
+]);
 
 export const pipelineStageCounts = pgTable('pipeline_stage_counts', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -156,8 +160,12 @@ export const pipelineStageCounts = pgTable('pipeline_stage_counts', {
   reportWeekId: uuid('report_week_id').references(() => reportWeeks.id, { onDelete: 'cascade' }),
   stage: varchar('stage', { length: 100 }).notNull(),
   count: integer('count').default(0),
+  dollarValue: decimal('dollar_value', { precision: 12, scale: 2 }).default('0'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+}, (table) => [
+  index('pipeline_stage_counts_tenant_id_idx').on(table.tenantId),
+  index('pipeline_stage_counts_report_week_id_idx').on(table.reportWeekId),
+]);
 
 export const hotListItems = pgTable('hot_list_items', {
   id: uuid('id').primaryKey().defaultRandom(),

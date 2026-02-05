@@ -1,5 +1,7 @@
 ---
 import DashboardLayout from '../layouts/DashboardLayout.astro';
+import { DashboardIsland } from '../components/dashboard/DashboardIsland';
+import { SyncStatusBanner } from '../components/dashboard/SyncStatusBanner';
 ---
 
 <DashboardLayout title="Dashboard">
@@ -17,52 +19,10 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       </a>
     </div>
 
-    <!-- KPI Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <div class="bg-white rounded-xl border border-gray-200 p-6">
-        <p class="text-sm font-medium text-gray-500">Total Leads</p>
-        <p class="mt-2 text-3xl font-semibold text-gray-900">--</p>
-        <p class="mt-1 text-sm text-gray-500">This week</p>
-      </div>
-      <div class="bg-white rounded-xl border border-gray-200 p-6">
-        <p class="text-sm font-medium text-gray-500">Qualified Leads</p>
-        <p class="mt-2 text-3xl font-semibold text-gray-900">--</p>
-        <p class="mt-1 text-sm text-gray-500">This week</p>
-      </div>
-      <div class="bg-white rounded-xl border border-gray-200 p-6">
-        <p class="text-sm font-medium text-gray-500">Pipeline Value</p>
-        <p class="mt-2 text-3xl font-semibold text-gray-900">--</p>
-        <p class="mt-1 text-sm text-gray-500">Weighted</p>
-      </div>
-      <div class="bg-white rounded-xl border border-gray-200 p-6">
-        <p class="text-sm font-medium text-gray-500">Hot Candidates</p>
-        <p class="mt-2 text-3xl font-semibold text-gray-900">--</p>
-        <p class="mt-1 text-sm text-gray-500">Active</p>
-      </div>
-    </div>
-
-    <!-- Charts Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Lead Trends</h2>
-        <div class="h-64 flex items-center justify-center text-gray-400">
-          Chart will be rendered here
-        </div>
-      </div>
-      <div class="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Pipeline by Stage</h2>
-        <div class="h-64 flex items-center justify-center text-gray-400">
-          Chart will be rendered here
-        </div>
-      </div>
-    </div>
+    <!-- Dashboard Island: KPI Cards, Time Window Toggle, Charts -->
+    <DashboardIsland client:load />
 
     <!-- Data Freshness Banner -->
-    <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-center gap-3">
-      <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-      <p class="text-sm text-blue-800">
-        Data last synced: <span class="font-medium">--</span>
-      </p>
-    </div>
+    <SyncStatusBanner client:load />
   </div>
 </DashboardLayout>
