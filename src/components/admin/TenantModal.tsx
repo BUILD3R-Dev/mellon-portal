@@ -18,6 +18,8 @@ interface Tenant {
   name: string;
   status: 'active' | 'inactive' | 'suspended';
   timezone: string;
+  clienttetherWebKey?: string | null;
+  clienttetherAccessToken?: string | null;
   branding?: {
     mellonLogoUrl?: string | null;
     tenantLogoUrl?: string | null;
@@ -38,6 +40,8 @@ interface FormState {
   status: 'active' | 'inactive' | 'suspended';
   mellonLogoUrl: string;
   tenantLogoUrl: string;
+  clienttetherWebKey: string;
+  clienttetherAccessToken: string;
 }
 
 interface FormErrors {
@@ -67,6 +71,8 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
     status: tenant?.status || 'active',
     mellonLogoUrl: tenant?.branding?.mellonLogoUrl || '',
     tenantLogoUrl: tenant?.branding?.tenantLogoUrl || '',
+    clienttetherWebKey: tenant?.clienttetherWebKey || '',
+    clienttetherAccessToken: tenant?.clienttetherAccessToken || '',
   });
   const [errors, setErrors] = React.useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -82,6 +88,8 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
         status: tenant.status,
         mellonLogoUrl: tenant.branding?.mellonLogoUrl || '',
         tenantLogoUrl: tenant.branding?.tenantLogoUrl || '',
+        clienttetherWebKey: tenant.clienttetherWebKey || '',
+        clienttetherAccessToken: tenant.clienttetherAccessToken || '',
       });
     } else {
       setFormState({
@@ -90,6 +98,8 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
         status: 'active',
         mellonLogoUrl: '',
         tenantLogoUrl: '',
+        clienttetherWebKey: '',
+        clienttetherAccessToken: '',
       });
     }
     setErrors({});
@@ -180,8 +190,11 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
         status: formState.status,
       };
 
-      // Include logo URLs for edit mode
+      // Include ClientTether credentials and logo URLs for edit mode
       if (mode === 'edit') {
+        requestBody.clienttetherWebKey = formState.clienttetherWebKey.trim() || null;
+        requestBody.clienttetherAccessToken = formState.clienttetherAccessToken.trim() || null;
+
         if (formState.mellonLogoUrl.trim()) {
           requestBody.mellonLogoUrl = formState.mellonLogoUrl.trim();
         } else if (tenant?.branding?.mellonLogoUrl) {
@@ -343,6 +356,60 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
                   Note: Changing status to inactive will log out all tenant users.
                 </p>
               </div>
+            )}
+
+            {/* ClientTether API fields (only for edit mode) */}
+            {mode === 'edit' && (
+              <>
+                <div className="border-t border-gray-200 pt-5">
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">ClientTether Integration</h3>
+                  <p className="text-xs text-gray-500 mb-4">
+                    API credentials from the ClientTether Settings &gt; API page. Both fields are required for data sync.
+                  </p>
+                </div>
+
+                {/* Access Token */}
+                <div>
+                  <label htmlFor="clienttetherAccessToken" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Access Token
+                  </label>
+                  <input
+                    type="password"
+                    id="clienttetherAccessToken"
+                    name="clienttetherAccessToken"
+                    value={formState.clienttetherAccessToken}
+                    onChange={handleInputChange}
+                    disabled={isSubmitting}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm"
+                    placeholder="X-Access-Token value"
+                    autoComplete="off"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    The X-Access-Token header value from ClientTether API settings
+                  </p>
+                </div>
+
+                {/* Web Key */}
+                <div>
+                  <label htmlFor="clienttetherWebKey" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Web Key
+                  </label>
+                  <input
+                    type="text"
+                    id="clienttetherWebKey"
+                    name="clienttetherWebKey"
+                    value={formState.clienttetherWebKey}
+                    onChange={handleInputChange}
+                    disabled={isSubmitting}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm"
+                    placeholder="X-Web-Key value (e.g., CT_...)"
+                    autoComplete="off"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    The X-Web-Key header value from ClientTether API settings
+                  </p>
+                </div>
+              </>
             )}
 
             {/* Logo URL fields (only for edit mode) */}

@@ -8,6 +8,8 @@ interface TenantData {
   name: string;
   status: string;
   timezone: string;
+  clienttetherWebKey: string | null;
+  clienttetherAccessToken: string | null;
   createdAt: string;
   updatedAt: string;
   userCount: number;
@@ -129,6 +131,8 @@ export const GET: APIRoute = async ({ cookies, params }) => {
         name: tenants.name,
         status: tenants.status,
         timezone: tenants.timezone,
+        clienttetherWebKey: tenants.clienttetherWebKey,
+        clienttetherAccessToken: tenants.clienttetherAccessToken,
         createdAt: tenants.createdAt,
         updatedAt: tenants.updatedAt,
         brandingId: tenantBranding.id,
@@ -170,6 +174,8 @@ export const GET: APIRoute = async ({ cookies, params }) => {
       name: tenant.name,
       status: tenant.status,
       timezone: tenant.timezone,
+      clienttetherWebKey: tenant.clienttetherWebKey,
+      clienttetherAccessToken: tenant.clienttetherAccessToken,
       createdAt: tenant.createdAt.toISOString(),
       updatedAt: tenant.updatedAt.toISOString(),
       userCount,
@@ -276,7 +282,7 @@ export const PATCH: APIRoute = async ({ cookies, params, request }) => {
 
     // Parse request body
     const body = await request.json();
-    const { name, timezone, status, mellonLogoUrl, tenantLogoUrl } = body;
+    const { name, timezone, status, mellonLogoUrl, tenantLogoUrl, clienttetherWebKey, clienttetherAccessToken } = body;
 
     // Validation for tenant fields
     const tenantUpdates: Record<string, any> = {};
@@ -327,6 +333,14 @@ export const PATCH: APIRoute = async ({ cookies, params, request }) => {
         });
       }
       tenantUpdates.status = status;
+    }
+
+    if (clienttetherWebKey !== undefined) {
+      tenantUpdates.clienttetherWebKey = clienttetherWebKey;
+    }
+
+    if (clienttetherAccessToken !== undefined) {
+      tenantUpdates.clienttetherAccessToken = clienttetherAccessToken;
     }
 
     // Add updatedAt timestamp
@@ -421,6 +435,8 @@ export const PATCH: APIRoute = async ({ cookies, params, request }) => {
       name: updatedTenant.name,
       status: updatedTenant.status,
       timezone: updatedTenant.timezone,
+      clienttetherWebKey: updatedTenant.clienttetherWebKey,
+      clienttetherAccessToken: updatedTenant.clienttetherAccessToken,
       createdAt: updatedTenant.createdAt.toISOString(),
       updatedAt: updatedTenant.updatedAt.toISOString(),
       userCount,

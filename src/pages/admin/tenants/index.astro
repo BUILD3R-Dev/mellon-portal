@@ -21,6 +21,8 @@ const allTenants = await db
     name: tenants.name,
     status: tenants.status,
     timezone: tenants.timezone,
+    clienttetherWebKey: tenants.clienttetherWebKey,
+    clienttetherAccessToken: tenants.clienttetherAccessToken,
     createdAt: tenants.createdAt,
     brandingId: tenantBranding.id,
     themeId: tenantBranding.themeId,
@@ -37,6 +39,8 @@ const tenantsData = allTenants.map((t) => ({
   name: t.name,
   status: t.status as 'active' | 'inactive' | 'suspended',
   timezone: t.timezone,
+  clienttetherWebKey: t.clienttetherWebKey,
+  clienttetherAccessToken: t.clienttetherAccessToken,
   createdAt: t.createdAt.toISOString(),
   branding: t.brandingId
     ? {

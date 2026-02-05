@@ -9,6 +9,8 @@ interface Tenant {
   status: 'active' | 'inactive' | 'suspended';
   timezone: string;
   createdAt: string;
+  clienttetherWebKey?: string | null;
+  clienttetherAccessToken?: string | null;
   branding?: {
     id: string;
     themeId: string;
