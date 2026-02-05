@@ -9,7 +9,7 @@ import type { APIRoute } from 'astro';
 import { validateSession, SESSION_COOKIE_NAME, getUserMemberships, TENANT_COOKIE_NAME } from '@/lib/auth';
 import { db, tenants } from '@/lib/db';
 import { eq } from 'drizzle-orm';
-import { syncTenant, createSyncRun, updateSyncRunStatus } from '../../../../worker/sync';
+import { syncTenant, createSyncRun, updateSyncRunStatus } from '@/lib/sync/run-sync';
 
 export const POST: APIRoute = async ({ cookies }) => {
   try {
