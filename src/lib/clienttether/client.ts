@@ -109,12 +109,54 @@ export class ClientTetherClient {
     }
   }
 
+  /**
+   * Fetches all pages of a paginated CT API endpoint.
+   * CT API supports limit/offset params and returns TotalRecord in response.
+   */
+  private async requestAllPages<T>(endpoint: string, pageSize = 100): Promise<ApiResponse<T[]>> {
+    const allResults: T[] = [];
+    let offset = 0;
+    let totalRecord = Infinity;
+
+    while (offset < totalRecord) {
+      const separator = endpoint.includes('?') ? '&' : '?';
+      const url = `${this.apiUrl}/v2/api/${endpoint}${separator}limit=${pageSize}&offset=${offset}`;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Access-Token': this.accessToken,
+        ...(this.webKey && { 'X-Web-Key': this.webKey }),
+      };
+
+      try {
+        const response = await fetch(url, { headers });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          return { data: allResults, error: `API Error: ${response.status} - ${errorText}` };
+        }
+
+        const data = await response.json();
+        totalRecord = data.TotalRecord ?? 0;
+        const pageData = data.data ?? [];
+
+        if (!Array.isArray(pageData) || pageData.length === 0) break;
+
+        allResults.push(...pageData);
+        offset += pageData.length;
+      } catch (error) {
+        return { data: allResults, error: `Network Error: ${error}` };
+      }
+    }
+
+    return { data: allResults };
+  }
+
   async getLeads(params?: { modifiedSince?: string }): Promise<ApiResponse<CTLeadResponse[]>> {
-    return this.request<CTLeadResponse[]>('read_client_list');
+    return this.requestAllPages<CTLeadResponse>('read_client_list');
   }
 
   async getOpportunities(params?: { modifiedSince?: string }): Promise<ApiResponse<CTOpportunityResponse[]>> {
-    return this.request<CTOpportunityResponse[]>('read_opportunity_list');
+    return this.requestAllPages<CTOpportunityResponse>('read_opportunity_list');
   }
 
   async getSalesCycles(): Promise<ApiResponse<unknown[]>> {
