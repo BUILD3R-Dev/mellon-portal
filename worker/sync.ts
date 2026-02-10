@@ -338,15 +338,45 @@ export async function normalizePipelineStages(
   return recordsUpdated;
 }
 
+/** Hot list stages: later-funnel stages where deals have significant momentum */
+const HOT_LIST_STAGES_LOWER = new Set([
+  'deal structure',
+  'discovery day booked',
+  'discovery day completed',
+  'fa requested',
+  'fa sent',
+  'fa signed',
+]);
+
+/**
+ * Parse the assigned_user field from CT API.
+ * May be a plain name string or a JSON object with first_name/last_name.
+ */
+function parseAssignedUser(raw?: string): string {
+  if (!raw) return '';
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed.first_name || parsed.last_name) {
+      return `${parsed.first_name || ''} ${parsed.last_name || ''}`.trim();
+    }
+  } catch {
+    // Not JSON, use as-is
+  }
+  return raw;
+}
+
 async function normalizeHotListItems(
   db: Database,
   tenantId: string,
-  opportunities: CTOpportunityResponse[]
+  opportunities: CTOpportunityResponse[],
+  likelihoodByStage: Map<string, number> = new Map()
 ) {
-  // Filter for high-probability prospect opportunities (hot list items)
-  const hotItems = opportunities.filter(
-    (opp) => opp.contact_type === PROSPECT_CONTACT_TYPE && (opp.probability || 0) >= 50
-  );
+  // Filter for prospects in hot list pipeline stages
+  const hotItems = opportunities.filter((opp) => {
+    if (opp.contact_type !== PROSPECT_CONTACT_TYPE) return false;
+    const stage = (opp.contact_sales_cycle || opp.stage || '').toLowerCase();
+    return HOT_LIST_STAGES_LOWER.has(stage);
+  });
 
   let recordsUpdated = 0;
 
@@ -360,15 +390,23 @@ async function normalizeHotListItems(
       )
     );
 
-  // Insert hot list items
+  // Insert hot list items using CT v2 field names
   for (const item of hotItems) {
+    const name = [item.firstName, item.lastName].filter(Boolean).join(' ') || 'Unknown';
+    const stage = item.contact_sales_cycle || item.stage || 'unknown';
+    const dealSize = parseFloat(item.deal_size || '0') || 0;
+    const likelyPct = likelihoodByStage.get(stage.toLowerCase()) || 0;
+    const weightedIff = dealSize * (likelyPct / 100);
+
     await db.insert(schema.hotListItems).values({
       tenantId,
-      candidateName: item.title || 'Unknown',
-      stage: item.stage || 'unknown',
-      likelyPct: item.probability || 0,
-      iff: String(item.value || 0),
-      weightedIff: String((item.value || 0) * ((item.probability || 0) / 100)),
+      candidateName: name,
+      market: item.compName || null,
+      stage,
+      salesLead: parseAssignedUser(item.assigned_user),
+      likelyPct,
+      iff: String(dealSize),
+      weightedIff: String(weightedIff),
       rawJson: item,
       sourceCreatedAt: parseSourceDate(item.created || item.last_modified_date),
     });
@@ -522,13 +560,26 @@ export async function syncTenant(db: Database, tenant: TenantRecord): Promise<nu
     totalRecords += await normalizeLeadMetrics(db, tenant.id, leadsResponse.data);
   }
 
+  // Fetch sales cycles to get likelihood_to_close (Odds) per stage
+  console.log('    Fetching sales cycles...');
+  const salesCyclesResponse = await fetchWithRetry(() => client.getSalesCycles());
+  const likelihoodByStage = new Map<string, number>();
+  if (salesCyclesResponse.data) {
+    for (const cycle of salesCyclesResponse.data) {
+      likelihoodByStage.set(
+        cycle.sales_cycle_name.toLowerCase(),
+        parseInt(cycle.likelihood_to_close) || 0
+      );
+    }
+  }
+
   // Fetch opportunities with retry
   console.log('    Fetching opportunities...');
   const opportunitiesResponse = await fetchWithRetry(() => client.getOpportunities());
   if (opportunitiesResponse.data) {
     await storeRawSnapshot(db, tenant.id, '/opportunities', opportunitiesResponse.data);
     totalRecords += await normalizePipelineStages(db, tenant.id, opportunitiesResponse.data);
-    totalRecords += await normalizeHotListItems(db, tenant.id, opportunitiesResponse.data);
+    totalRecords += await normalizeHotListItems(db, tenant.id, opportunitiesResponse.data, likelihoodByStage);
   }
 
   // Fetch notes with retry

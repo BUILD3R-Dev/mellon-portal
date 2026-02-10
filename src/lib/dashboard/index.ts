@@ -13,6 +13,7 @@ export {
   ACTIVE_PIPELINE_STAGES,
   isActiveStage,
   EARLY_FUNNEL_STAGES,
+  HOT_LIST_STAGES,
 } from './queries';
 
 export type {

@@ -362,6 +362,7 @@ describe('Sync Worker', () => {
       const mockClient = {
         getLeads: vi.fn().mockResolvedValue({ data: [] }),
         getOpportunities: vi.fn().mockResolvedValue({ data: [] }),
+        getSalesCycles: vi.fn().mockResolvedValue({ data: [] }),
         getNotes: vi.fn().mockResolvedValue({ data: [] }),
         getScheduledActivities: vi.fn().mockResolvedValue({ data: [] }),
       };

@@ -54,6 +54,19 @@ export const EARLY_FUNNEL_STAGES = [
   'outbound call',
 ];
 
+/**
+ * Pipeline stages that qualify for the Hot List.
+ * These are later-funnel stages where deals have significant momentum.
+ */
+export const HOT_LIST_STAGES = [
+  'Deal Structure',
+  'Discovery Day Booked',
+  'Discovery Day Completed',
+  'FA Requested',
+  'FA Sent',
+  'FA Signed',
+];
+
 /** KPI data shape returned by getKPIData */
 export interface KPIData {
   newLeads: number;
