@@ -38,30 +38,14 @@ describe('ClientTether API Client', () => {
   });
 
   describe('getScheduledActivities', () => {
-    it('returns expected response shape with activities data', async () => {
-      const mockActivities = [
-        {
-          id: 'activity-1',
-          type: 'call',
-          scheduled_at: '2026-01-25T14:00:00Z',
-          contact_name: 'Jane Smith',
-          description: 'Follow-up call',
-          status: 'scheduled',
-        },
-      ];
-
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockActivities),
-      });
-
+    it('returns empty array since endpoint is stubbed', async () => {
       const client = new ClientTetherClient(mockConfig);
       const result = await client.getScheduledActivities({
         startDate: '2026-01-20',
         endDate: '2026-01-31',
       });
 
-      expect(result.data).toEqual(mockActivities);
+      expect(result.data).toEqual([]);
       expect(result.error).toBeUndefined();
     });
   });
@@ -75,7 +59,7 @@ describe('ClientTether API Client', () => {
       });
 
       const client = new ClientTetherClient(mockConfig);
-      const result = await client.getNotes();
+      const result = await client.getNotes({ contactId: 'contact-123' });
 
       expect(result.data).toBeNull();
       expect(result.error).toContain('API Error: 401');
@@ -91,7 +75,7 @@ describe('ClientTether API Client', () => {
       });
 
       const client = new ClientTetherClient(mockConfig);
-      await client.getNotes();
+      await client.getNotes({ contactId: 'contact-123' });
 
       expect(global.fetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -113,7 +97,7 @@ describe('ClientTether API Client', () => {
         apiUrl: mockConfig.apiUrl,
         accessToken: mockConfig.accessToken,
       });
-      await client.getNotes();
+      await client.getNotes({ contactId: 'contact-123' });
 
       const fetchCall = vi.mocked(global.fetch).mock.calls[0];
       const headers = (fetchCall[1] as RequestInit).headers as Record<string, string>;

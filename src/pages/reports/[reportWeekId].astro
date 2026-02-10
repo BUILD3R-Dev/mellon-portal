@@ -5,10 +5,13 @@
  * Displays a single published report for tenant users.
  * Requires tenant access and report must be published.
  * Redirects to /reports if report is draft or not found.
+ * Includes a PDF download button when the pdf_export feature flag is enabled.
  */
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import { ReportSectionCard } from '@/components/reports/ReportSectionCard';
+import { PdfDownloadButton } from '@/components/reports/PdfDownloadButton';
 import { getReportWeekById, getReportWeekManualByReportWeekId, formatWeekPeriod } from '@/lib/report-weeks';
+import { isFeatureEnabled, FEATURE_PDF_EXPORT } from '@/lib/feature-flags';
 
 // Get user and tenant context from middleware
 const { user, memberships, tenantId, isAgencyAdmin } = Astro.locals;
@@ -69,22 +72,28 @@ const contentData = {
 // Find tenant name from memberships
 const currentMembership = memberships?.find((m) => m.tenantId === tenantId);
 const tenantName = currentMembership?.tenant?.name || 'Your Organization';
+
+// Check if PDF export feature is enabled for this tenant
+const pdfExportEnabled = await isFeatureEnabled(tenantId, FEATURE_PDF_EXPORT);
 ---
 
 <DashboardLayout title={`Report - ${weekPeriod}`}>
   <div class="max-w-4xl mx-auto space-y-6">
     <!-- Back link and page header -->
     <div class="space-y-2">
-      <div class="flex items-center gap-2 text-sm text-gray-500">
+      <div class="flex items-center justify-between">
         <a
           href="/reports"
-          class="hover:text-gray-700 flex items-center gap-1"
+          class="hover:text-gray-700 flex items-center gap-1 text-sm text-gray-500"
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
           Back to Reports
         </a>
+        {pdfExportEnabled && (
+          <PdfDownloadButton client:load reportWeekId={reportWeekId} />
+        )}
       </div>
       <h1 class="text-2xl font-semibold text-gray-900">Weekly Report</h1>
       <p class="text-lg text-gray-600">{weekPeriod}</p>

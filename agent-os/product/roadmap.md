@@ -43,13 +43,13 @@
 
 ## Milestone 4: Reports History & PDF Export
 
-33. [ ] Reports History Index — Build paginated list of all published report weeks for a tenant with year/month filtering `M`
-34. [ ] Historical Report Detail — Create detail view for accessing any historical published report with all sections `S`
-35. [ ] Year/Month Filter Controls — Add dropdown filters for browsing reports by year and month `S`
-36. [ ] PDF Export Feature Flag — Implement feature flag system to enable/disable PDF export per tenant `XS`
-37. [ ] PDF Template Design — Create Playwright-compatible HTML template matching the portal report layout for PDF generation `M`
-38. [ ] PDF Generation Worker — Build background worker using Playwright to render and generate PDF files from published reports `L`
-39. [ ] PDF Download UI — Add download button on published reports that triggers PDF generation and provides download link `S`
+33. [x] Reports History Index — Build paginated list of all published report weeks for a tenant with year/month filtering `M`
+34. [x] Historical Report Detail — Create detail view for accessing any historical published report with all sections `S`
+35. [x] Year/Month Filter Controls — Add dropdown filters for browsing reports by year and month `S`
+36. [x] PDF Export Feature Flag — Implement feature flag system to enable/disable PDF export per tenant `XS`
+37. [x] PDF Template Design — Create Playwright-compatible HTML template matching the portal report layout for PDF generation `M`
+38. [x] PDF Generation Worker — Build background worker using Playwright to render and generate PDF files from published reports `L`
+39. [x] PDF Download UI — Add download button on published reports that triggers PDF generation and provides download link `S`
 
 > Notes
 > - Order items by technical dependencies and product architecture

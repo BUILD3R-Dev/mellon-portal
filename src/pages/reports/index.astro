@@ -2,13 +2,14 @@
 /**
  * Reports List Page
  *
- * Displays a list of published reports for the current tenant user.
+ * Displays a paginated list of published reports for the current tenant user.
  * Features the "Latest Report" prominently at the top.
+ * Includes year/month filters and optional PDF download buttons.
  * Requires authenticated user with tenant membership.
  */
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import { ReportsList } from '@/components/reports/ReportsList';
-import { getReportWeeksForTenant, formatWeekPeriod } from '@/lib/report-weeks';
+import { isFeatureEnabled, FEATURE_PDF_EXPORT } from '@/lib/feature-flags';
 
 // Get user and tenant context from middleware
 const { user, memberships, tenantId, isAgencyAdmin } = Astro.locals;
@@ -30,18 +31,8 @@ if (!hasTenantAccess) {
   return Astro.redirect('/dashboard');
 }
 
-// Fetch published reports for this tenant
-const reportWeeks = await getReportWeeksForTenant(tenantId, { status: 'published' });
-
-// Format reports for the component
-const reports = reportWeeks.map((rw) => ({
-  id: rw.id,
-  weekEndingDate: rw.weekEndingDate,
-  periodStartAt: rw.periodStartAt.toISOString(),
-  periodEndAt: rw.periodEndAt.toISOString(),
-  weekPeriod: formatWeekPeriod(rw.periodStartAt, rw.periodEndAt),
-  status: rw.status,
-}));
+// Check if PDF export feature is enabled for this tenant
+const pdfExportEnabled = await isFeatureEnabled(tenantId, FEATURE_PDF_EXPORT);
 ---
 
 <DashboardLayout title="Reports">
@@ -53,6 +44,6 @@ const reports = reportWeeks.map((rw) => ({
     </div>
 
     <!-- Reports list -->
-    <ReportsList client:load reports={reports} />
+    <ReportsList client:load pdfExportEnabled={pdfExportEnabled} />
   </div>
 </DashboardLayout>

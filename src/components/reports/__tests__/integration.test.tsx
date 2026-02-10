@@ -4,13 +4,10 @@
 /**
  * Integration tests for Report Preview and Published View features
  *
- * Task Group 5.3: Write up to 8 additional strategic tests
- * - Integration test: Preview page shows all four content sections
- * - Integration test: Empty content sections hidden in both preview and published view
- * - Test: Draft reports hidden concept (component-level)
+ * Tests integration of ReportSectionCard and ReportsList components.
  */
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import { ReportSectionCard } from '../ReportSectionCard';
 import { ReportsList } from '../ReportsList';
 
@@ -48,11 +45,8 @@ describe('Integration: Report Content Sections', () => {
       </div>
     );
 
-    // Sections with content should be visible
     expect(screen.getByText('Narrative')).toBeInTheDocument();
     expect(screen.getByText('Discovery Days')).toBeInTheDocument();
-
-    // Empty sections should be completely hidden
     expect(screen.queryByText('Initiatives')).not.toBeInTheDocument();
     expect(screen.queryByText('Needs From Client')).not.toBeInTheDocument();
   });
@@ -71,6 +65,17 @@ describe('Integration: Report Content Sections', () => {
     expect(screen.getByText('Bold')).toBeInTheDocument();
   });
 });
+
+/** Parse the limit query param from a URL string */
+function parseLimitParam(urlStr: string): number | null {
+  try {
+    const url = new URL(urlStr, 'http://localhost');
+    const val = url.searchParams.get('limit');
+    return val ? parseInt(val, 10) : null;
+  } catch {
+    return null;
+  }
+}
 
 describe('Integration: Reports List Behavior', () => {
   const publishedReports = [
@@ -92,37 +97,86 @@ describe('Integration: Reports List Behavior', () => {
     },
   ];
 
-  it('only displays published reports (draft reports excluded at API level)', () => {
-    // This test verifies the component correctly handles published-only data
-    // The API filters out drafts before sending to the component
-    render(<ReportsList reports={publishedReports} />);
+  let originalFetch: typeof globalThis.fetch;
 
-    // All published reports should be shown
-    expect(screen.getByText('Jan 13 - Jan 17, 2025')).toBeInTheDocument();
-    expect(screen.getByText('Jan 6 - Jan 10, 2025')).toBeInTheDocument();
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
 
-    // Verify these are the only reports
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  function createFetchMock() {
+    return vi.fn((url: string) => {
+      const urlStr = typeof url === 'string' ? url : '';
+
+      if (urlStr.includes('/api/reports/available-years')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            success: true,
+            data: { years: [2025] },
+          }),
+        });
+      }
+
+      const limitValue = parseLimitParam(urlStr);
+      if (limitValue === 1) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            success: true,
+            data: [publishedReports[0]],
+            pagination: { page: 1, limit: 1, totalPages: 1, totalCount: publishedReports.length },
+          }),
+        });
+      }
+
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          success: true,
+          data: publishedReports,
+          pagination: { page: 1, limit: 10, totalPages: 1, totalCount: publishedReports.length },
+        }),
+      });
+    });
+  }
+
+  it('only displays published reports (draft reports excluded at API level)', async () => {
+    globalThis.fetch = createFetchMock() as any;
+    render(<ReportsList pdfExportEnabled={false} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Jan 13 - Jan 17, 2025')).toBeInTheDocument();
+      expect(screen.getByText('Jan 6 - Jan 10, 2025')).toBeInTheDocument();
+    });
+
     const viewButtons = screen.getAllByRole('link', { name: /view report/i });
     expect(viewButtons).toHaveLength(2);
   });
 
-  it('latest report is styled prominently with accent color', () => {
-    render(<ReportsList reports={publishedReports} />);
+  it('latest report is styled prominently with accent color', async () => {
+    globalThis.fetch = createFetchMock() as any;
+    render(<ReportsList pdfExportEnabled={false} />);
 
-    // Should have "Latest Report" heading
-    expect(screen.getByText('Latest Report')).toBeInTheDocument();
-
-    // Should have "Previous Reports" heading for older ones
-    expect(screen.getByText('Previous Reports')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Latest Report')).toBeInTheDocument();
+      expect(screen.getByText('Previous Reports')).toBeInTheDocument();
+    });
   });
 
-  it('reports link to correct detail page URL', () => {
-    render(<ReportsList reports={publishedReports} />);
+  it('reports link to correct detail page URL', async () => {
+    globalThis.fetch = createFetchMock() as any;
+    render(<ReportsList pdfExportEnabled={false} />);
 
-    const links = screen.getAllByRole('link', { name: /view report/i });
-
-    expect(links[0]).toHaveAttribute('href', '/reports/rw-pub-1');
-    expect(links[1]).toHaveAttribute('href', '/reports/rw-pub-2');
+    await waitFor(() => {
+      const links = screen.getAllByRole('link', { name: /view report/i });
+      expect(links[0]).toHaveAttribute('href', '/reports/rw-pub-1');
+      expect(links[1]).toHaveAttribute('href', '/reports/rw-pub-2');
+    });
   });
 });
 
@@ -130,8 +184,6 @@ describe('Integration: Preview vs Published View Consistency', () => {
   it('ReportSectionCard component behaves consistently for preview and published views', () => {
     const content = '<p>Test content for both views</p>';
 
-    // Same component is used in both preview and published views
-    // This test verifies the component renders identically
     const { rerender } = render(
       <ReportSectionCard title="Narrative" htmlContent={content} />
     );
@@ -139,7 +191,6 @@ describe('Integration: Preview vs Published View Consistency', () => {
     expect(screen.getByText('Narrative')).toBeInTheDocument();
     expect(screen.getByText('Test content for both views')).toBeInTheDocument();
 
-    // Re-render simulating published view - same result expected
     rerender(
       <ReportSectionCard title="Narrative" htmlContent={content} />
     );
@@ -149,14 +200,12 @@ describe('Integration: Preview vs Published View Consistency', () => {
   });
 
   it('empty content hides section in both contexts', () => {
-    // Preview context
     const { rerender, container } = render(
       <ReportSectionCard title="Empty Section" htmlContent={null} />
     );
 
     expect(container.firstChild).toBeNull();
 
-    // Published view context - same behavior
     rerender(
       <ReportSectionCard title="Empty Section" htmlContent="" />
     );

@@ -21,10 +21,12 @@ export {
 export {
   checkOverlappingWeeks,
   getReportWeeksForTenant,
+  getReportWeeksForTenantPaginated,
   getReportWeekById,
   createReportWeek,
   updateReportWeek,
   deleteReportWeek,
   getReportWeekManualByReportWeekId,
   updateReportWeekManual,
+  getDistinctReportYears,
 } from './queries';

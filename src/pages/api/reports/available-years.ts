@@ -1,32 +1,30 @@
 /**
- * GET /api/dashboard/kpi
+ * GET /api/reports/available-years
  *
- * Returns all four KPI values for the authenticated tenant user's dashboard.
- * Queries from locally synced pipelineStageCounts and leadMetrics tables.
- * Accepts a `timeWindow` query parameter: 'report-week' (default) or 'rolling-7'.
+ * Returns distinct years for which published reports exist for the tenant.
+ * Used to populate the year filter dropdown in the reports list UI.
  */
 import type { APIRoute } from 'astro';
 import { validateSession, SESSION_COOKIE_NAME, getUserMemberships, TENANT_COOKIE_NAME } from '@/lib/auth';
-import { getKPIData } from '@/lib/dashboard';
-import type { KPIData } from '@/lib/dashboard';
+import { getDistinctReportYears } from '@/lib/report-weeks';
 
-interface KPIResponse {
+interface AvailableYearsResponse {
   success: true;
-  data: KPIData;
+  data: { years: number[] };
 }
 
-interface KPIErrorResponse {
+interface AvailableYearsErrorResponse {
   success: false;
   error: string;
   code: 'UNAUTHORIZED' | 'FORBIDDEN' | 'INTERNAL_ERROR';
 }
 
-export const GET: APIRoute = async ({ cookies, url }) => {
+export const GET: APIRoute = async ({ cookies }) => {
   try {
     // Validate session
     const sessionToken = cookies.get(SESSION_COOKIE_NAME)?.value;
     if (!sessionToken) {
-      const response: KPIErrorResponse = {
+      const response: AvailableYearsErrorResponse = {
         success: false,
         error: 'Authentication required',
         code: 'UNAUTHORIZED',
@@ -39,7 +37,7 @@ export const GET: APIRoute = async ({ cookies, url }) => {
 
     const session = await validateSession(sessionToken);
     if (!session) {
-      const response: KPIErrorResponse = {
+      const response: AvailableYearsErrorResponse = {
         success: false,
         error: 'Invalid or expired session',
         code: 'UNAUTHORIZED',
@@ -59,9 +57,9 @@ export const GET: APIRoute = async ({ cookies, url }) => {
     // Get tenant context from cookie
     const tenantId = cookies.get(TENANT_COOKIE_NAME)?.value;
 
-    // If no tenant context set, user cannot view KPIs
+    // If no tenant context set, user cannot view reports
     if (!tenantId) {
-      const response: KPIErrorResponse = {
+      const response: AvailableYearsErrorResponse = {
         success: false,
         error: 'No tenant context selected',
         code: 'FORBIDDEN',
@@ -76,7 +74,7 @@ export const GET: APIRoute = async ({ cookies, url }) => {
     const hasTenantAccess = isAgencyAdmin || memberships.some((m) => m.tenantId === tenantId);
 
     if (!hasTenantAccess) {
-      const response: KPIErrorResponse = {
+      const response: AvailableYearsErrorResponse = {
         success: false,
         error: 'Access denied',
         code: 'FORBIDDEN',
@@ -87,15 +85,11 @@ export const GET: APIRoute = async ({ cookies, url }) => {
       });
     }
 
-    // Parse timeWindow query parameter
-    const timeWindowParam = url.searchParams.get('timeWindow') || 'report-week';
-    const timeWindow = timeWindowParam === 'rolling-7' ? 'rolling-7' : 'report-week';
+    const years = await getDistinctReportYears(tenantId);
 
-    const data = await getKPIData(tenantId, undefined, timeWindow);
-
-    const response: KPIResponse = {
+    const response: AvailableYearsResponse = {
       success: true,
-      data,
+      data: { years },
     };
 
     return new Response(JSON.stringify(response), {
@@ -103,8 +97,8 @@ export const GET: APIRoute = async ({ cookies, url }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching KPI data:', error);
-    const response: KPIErrorResponse = {
+    console.error('Error fetching available years:', error);
+    const response: AvailableYearsErrorResponse = {
       success: false,
       error: 'An unexpected error occurred',
       code: 'INTERNAL_ERROR',

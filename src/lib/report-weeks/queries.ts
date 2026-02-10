@@ -48,14 +48,8 @@ export async function checkOverlappingWeeks(
   return (result[0]?.count || 0) > 0;
 }
 
-/**
- * Gets all report weeks for a tenant with optional filters
- *
- * @param tenantId - The tenant ID
- * @param options - Filter options
- * @returns Array of report weeks
- */
-export async function getReportWeeksForTenant(
+/** Builds filter conditions for report week queries */
+function buildFilterConditions(
   tenantId: string,
   options?: {
     status?: 'draft' | 'published';
@@ -81,11 +75,71 @@ export async function getReportWeeksForTenant(
     );
   }
 
+  return and(...conditions);
+}
+
+/**
+ * Gets all report weeks for a tenant with optional filters
+ *
+ * @param tenantId - The tenant ID
+ * @param options - Filter options
+ * @returns Array of report weeks
+ */
+export async function getReportWeeksForTenant(
+  tenantId: string,
+  options?: {
+    status?: 'draft' | 'published';
+    year?: number;
+    month?: number;
+  }
+) {
+  const whereClause = buildFilterConditions(tenantId, options);
+
   return db
     .select()
     .from(reportWeeks)
-    .where(and(...conditions))
+    .where(whereClause)
     .orderBy(desc(reportWeeks.weekEndingDate));
+}
+
+/**
+ * Gets paginated report weeks for a tenant with optional filters.
+ * Returns both the data slice and the total count for pagination metadata.
+ *
+ * @param tenantId - The tenant ID
+ * @param options - Filter and pagination options
+ * @returns Object with data array and totalCount
+ */
+export async function getReportWeeksForTenantPaginated(
+  tenantId: string,
+  options: {
+    status?: 'draft' | 'published';
+    year?: number;
+    month?: number;
+    limit: number;
+    offset: number;
+  }
+) {
+  const whereClause = buildFilterConditions(tenantId, options);
+
+  const [countResult, data] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(reportWeeks)
+      .where(whereClause),
+    db
+      .select()
+      .from(reportWeeks)
+      .where(whereClause)
+      .orderBy(desc(reportWeeks.weekEndingDate))
+      .limit(options.limit)
+      .offset(options.offset),
+  ]);
+
+  return {
+    data,
+    totalCount: countResult[0]?.count ?? 0,
+  };
 }
 
 /**
@@ -245,4 +299,25 @@ export async function updateReportWeekManual(
     .returning();
 
   return result;
+}
+
+/**
+ * Gets distinct years from report weeks for a tenant.
+ * Used for populating year filter dropdowns.
+ *
+ * @param tenantId - The tenant ID
+ * @returns Array of distinct years sorted descending
+ */
+export async function getDistinctReportYears(
+  tenantId: string
+): Promise<number[]> {
+  const result = await db
+    .select({
+      year: sql<number>`DISTINCT EXTRACT(YEAR FROM ${reportWeeks.weekEndingDate})::int`,
+    })
+    .from(reportWeeks)
+    .where(eq(reportWeeks.tenantId, tenantId))
+    .orderBy(sql`EXTRACT(YEAR FROM ${reportWeeks.weekEndingDate}) DESC`);
+
+  return result.map((r) => r.year);
 }

@@ -215,14 +215,17 @@ export const ctScheduledActivities = pgTable('ct_scheduled_activities', {
   index('ct_scheduled_activities_scheduled_at_idx').on(table.scheduledAt),
 ]);
 
-// Optional Tables
+// Report Exports Table
 export const reportExports = pgTable('report_exports', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   reportWeekId: uuid('report_week_id').notNull().references(() => reportWeeks.id, { onDelete: 'cascade' }),
   pdfUrl: text('pdf_url'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+}, (table) => [
+  uniqueIndex('report_exports_tenant_report_week_idx').on(table.tenantId, table.reportWeekId),
+  index('report_exports_tenant_report_week_lookup_idx').on(table.tenantId, table.reportWeekId),
+]);
 
 export const auditLog = pgTable('audit_log', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -243,3 +246,16 @@ export const tenantFieldMappings = pgTable('tenant_field_mappings', {
   customFieldMappings: jsonb('custom_field_mappings'),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
+
+// Feature Flags Table
+export const featureFlags = pgTable('feature_flags', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  featureKey: varchar('feature_key', { length: 100 }).notNull(),
+  enabled: boolean('enabled').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex('feature_flags_tenant_feature_key_idx').on(table.tenantId, table.featureKey),
+  index('feature_flags_tenant_id_idx').on(table.tenantId),
+]);

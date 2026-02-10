@@ -1,13 +1,14 @@
 /**
  * GET /api/reports
  *
- * Returns list of published reports for the authenticated tenant user.
+ * Returns paginated list of published reports for the authenticated tenant user.
+ * Accepts query parameters: page (default 1), limit (default 10), year, month.
  * Filters by status='published' and the user's current tenant context.
  * Orders by weekEndingDate descending (most recent first).
  */
 import type { APIRoute } from 'astro';
 import { validateSession, SESSION_COOKIE_NAME, getUserMemberships, TENANT_COOKIE_NAME } from '@/lib/auth';
-import { getReportWeeksForTenant, formatWeekPeriod } from '@/lib/report-weeks';
+import { getReportWeeksForTenantPaginated, formatWeekPeriod } from '@/lib/report-weeks';
 
 interface ReportData {
   id: string;
@@ -18,9 +19,17 @@ interface ReportData {
   status: 'draft' | 'published';
 }
 
+interface PaginationMeta {
+  page: number;
+  limit: number;
+  totalPages: number;
+  totalCount: number;
+}
+
 interface ReportsListResponse {
   success: true;
   data: ReportData[];
+  pagination: PaginationMeta;
 }
 
 interface ReportsErrorResponse {
@@ -29,7 +38,7 @@ interface ReportsErrorResponse {
   code: 'UNAUTHORIZED' | 'FORBIDDEN' | 'INTERNAL_ERROR';
 }
 
-export const GET: APIRoute = async ({ cookies }) => {
+export const GET: APIRoute = async ({ cookies, url }) => {
   try {
     // Validate session
     const sessionToken = cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -95,11 +104,57 @@ export const GET: APIRoute = async ({ cookies }) => {
       });
     }
 
-    // Query published reports for this tenant
-    const reportWeeks = await getReportWeeksForTenant(tenantId, { status: 'published' });
+    // Parse and validate pagination parameters
+    const pageParam = url.searchParams.get('page');
+    const limitParam = url.searchParams.get('limit');
+    const yearParam = url.searchParams.get('year');
+    const monthParam = url.searchParams.get('month');
+
+    let page = 1;
+    if (pageParam) {
+      const parsed = parseInt(pageParam, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        page = parsed;
+      }
+    }
+
+    let limit = 10;
+    if (limitParam) {
+      const parsed = parseInt(limitParam, 10);
+      if (!isNaN(parsed)) {
+        limit = Math.max(1, Math.min(50, parsed));
+      }
+    }
+
+    let year: number | undefined;
+    if (yearParam) {
+      const parsed = parseInt(yearParam, 10);
+      if (!isNaN(parsed)) {
+        year = parsed;
+      }
+    }
+
+    let month: number | undefined;
+    if (monthParam) {
+      const parsed = parseInt(monthParam, 10);
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) {
+        month = parsed;
+      }
+    }
+
+    const offset = (page - 1) * limit;
+
+    // Query paginated published reports for this tenant
+    const { data: reportWeeksData, totalCount } = await getReportWeeksForTenantPaginated(tenantId, {
+      status: 'published',
+      year,
+      month,
+      limit,
+      offset,
+    });
 
     // Format response data
-    const reportsData: ReportData[] = reportWeeks.map((rw) => ({
+    const reportsData: ReportData[] = reportWeeksData.map((rw) => ({
       id: rw.id,
       weekEndingDate: rw.weekEndingDate,
       periodStartAt: rw.periodStartAt.toISOString(),
@@ -108,9 +163,17 @@ export const GET: APIRoute = async ({ cookies }) => {
       status: rw.status,
     }));
 
+    const totalPages = Math.ceil(totalCount / limit);
+
     const response: ReportsListResponse = {
       success: true,
       data: reportsData,
+      pagination: {
+        page,
+        limit,
+        totalPages,
+        totalCount,
+      },
     };
 
     return new Response(JSON.stringify(response), {
