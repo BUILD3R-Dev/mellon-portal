@@ -235,6 +235,48 @@ async function normalizeLeadMetrics(
     recordsUpdated++;
   }
 
+  // Pre-compute new lead counts for time-window KPIs.
+  // Counts ALL prospects created within each window (regardless of current stage),
+  // because a lead created this week is "new" even if it already progressed in the pipeline.
+  const now = new Date();
+  const dayOfWeek = now.getUTCDay();
+  const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const monday = new Date(now);
+  monday.setUTCDate(now.getUTCDate() - mondayOffset);
+  monday.setUTCHours(0, 0, 0, 0);
+
+  const rolling7Start = new Date(now);
+  rolling7Start.setUTCDate(now.getUTCDate() - 7);
+  rolling7Start.setUTCHours(0, 0, 0, 0);
+
+  let newThisWeek = 0;
+  let newRolling7 = 0;
+  for (const lead of prospects) {
+    const createdDate = parseSourceDate(lead.created || lead.last_modified_date);
+    if (createdDate) {
+      if (createdDate >= monday) newThisWeek++;
+      if (createdDate >= rolling7Start) newRolling7++;
+    }
+  }
+
+  await db.insert(schema.leadMetrics).values({
+    tenantId,
+    dimensionType: 'new_this_week',
+    dimensionValue: 'all',
+    leads: newThisWeek,
+    sourceCreatedAt: now,
+  });
+  recordsUpdated++;
+
+  await db.insert(schema.leadMetrics).values({
+    tenantId,
+    dimensionType: 'new_rolling_7',
+    dimensionValue: 'all',
+    leads: newRolling7,
+    sourceCreatedAt: now,
+  });
+  recordsUpdated++;
+
   return recordsUpdated;
 }
 

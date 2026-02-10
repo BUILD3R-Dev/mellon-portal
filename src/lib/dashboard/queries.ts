@@ -7,7 +7,7 @@
  */
 
 import { db, pipelineStageCounts, leadMetrics, reportWeeks } from '@/lib/db';
-import { eq, and, isNull, isNotNull, desc, sql, gte } from 'drizzle-orm';
+import { eq, and, isNull, isNotNull, desc, sql } from 'drizzle-orm';
 
 /**
  * Active pipeline stages in ClientTether pipeline order.
@@ -75,30 +75,6 @@ export interface LeadTrendPoint {
 }
 
 /**
- * Returns the Monday of the current week at 00:00:00 UTC.
- */
-function getMondayOfCurrentWeek(): Date {
-  const now = new Date();
-  const day = now.getUTCDay();
-  const diff = day === 0 ? 6 : day - 1;
-  const monday = new Date(now);
-  monday.setUTCDate(now.getUTCDate() - diff);
-  monday.setUTCHours(0, 0, 0, 0);
-  return monday;
-}
-
-/**
- * Returns the date 7 days ago at 00:00:00 UTC.
- */
-function getRolling7Start(): Date {
-  const now = new Date();
-  const start = new Date(now);
-  start.setUTCDate(now.getUTCDate() - 7);
-  start.setUTCHours(0, 0, 0, 0);
-  return start;
-}
-
-/**
  * Gets KPI data for a tenant, optionally scoped to a specific report week.
  *
  * When reportWeekId is provided, queries snapshot data linked to that report week.
@@ -114,10 +90,6 @@ export async function getKPIData(
   reportWeekId?: string,
   timeWindow: 'report-week' | 'rolling-7' = 'report-week'
 ): Promise<KPIData> {
-  // Calculate new leads start date based on time window
-  const newLeadsStartDate = timeWindow === 'rolling-7' ? getRolling7Start() : getMondayOfCurrentWeek();
-
-  // Build lead metrics condition based on whether we want snapshot or live data
   if (reportWeekId) {
     // Snapshot mode: query data linked to the report week
     const newLeadsResult = await db
@@ -149,9 +121,10 @@ export async function getKPIData(
     return calculateKPIs(newLeads, pipelineRows);
   }
 
-  // Live mode: query current data (reportWeekId IS NULL)
-  // Use sourceCreatedAt (actual CT lead creation date) for the time filter
-  // since sync deletes/re-inserts all data, resetting createdAt each run
+  // Live mode: read the pre-computed new leads count from the sync worker.
+  // The sync worker counts individual leads by their CT creation date,
+  // regardless of current pipeline stage.
+  const newLeadsDimensionType = timeWindow === 'rolling-7' ? 'new_rolling_7' : 'new_this_week';
   const newLeadsResult = await db
     .select({
       totalLeads: sql<number>`coalesce(sum(${leadMetrics.leads}), 0)`,
@@ -161,8 +134,7 @@ export async function getKPIData(
       and(
         eq(leadMetrics.tenantId, tenantId),
         isNull(leadMetrics.reportWeekId),
-        eq(leadMetrics.dimensionType, 'status'),
-        gte(leadMetrics.sourceCreatedAt, newLeadsStartDate)
+        eq(leadMetrics.dimensionType, newLeadsDimensionType)
       )
     );
 
