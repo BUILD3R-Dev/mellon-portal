@@ -21,6 +21,7 @@ const { tenantId } = Astro.locals;
 let stageRows: Array<{
   stage: string;
   count: number | null;
+  opportunityCount: number | null;
   dollarValue: string | null;
 }> = [];
 
@@ -30,6 +31,7 @@ if (tenantId) {
       .select({
         stage: pipelineStageCounts.stage,
         count: pipelineStageCounts.count,
+        opportunityCount: pipelineStageCounts.opportunityCount,
         dollarValue: pipelineStageCounts.dollarValue,
       })
       .from(pipelineStageCounts)
@@ -63,14 +65,15 @@ const stageData = activeStages.map((s) => ({
 // Compute KPIs from stage data
 let totalPipelineValue = 0;
 let totalDealCount = 0;
+let totalOpportunityCount = 0;
 
-for (const s of stageData) {
-  totalPipelineValue += s.dollarValue;
-  totalDealCount += s.count;
+for (const s of activeStages) {
+  totalPipelineValue += parseFloat(s.dollarValue || '0');
+  totalDealCount += s.count || 0;
+  totalOpportunityCount += s.opportunityCount || 0;
 }
 
-const stageCount = stageData.length;
-const averageDealSize = totalDealCount > 0 ? totalPipelineValue / totalDealCount : 0;
+const averageDealSize = totalOpportunityCount > 0 ? totalPipelineValue / totalOpportunityCount : 0;
 
 // Format currency
 function formatCurrency(num: number): string {
@@ -108,8 +111,8 @@ function formatNumber(num: number): string {
       <KPICard
         client:load
         label="Active Opportunities"
-        value={formatNumber(totalDealCount)}
-        subtitle="In pipeline"
+        value={formatNumber(totalOpportunityCount)}
+        subtitle="With deal value"
       />
       <KPICard
         client:load

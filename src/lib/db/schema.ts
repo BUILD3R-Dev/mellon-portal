@@ -161,6 +161,7 @@ export const pipelineStageCounts = pgTable('pipeline_stage_counts', {
   reportWeekId: uuid('report_week_id').references(() => reportWeeks.id, { onDelete: 'cascade' }),
   stage: varchar('stage', { length: 100 }).notNull(),
   count: integer('count').default(0),
+  opportunityCount: integer('opportunity_count').default(0),
   dollarValue: decimal('dollar_value', { precision: 12, scale: 2 }).default('0'),
   sourceCreatedAt: timestamp('source_created_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),

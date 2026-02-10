@@ -1,0 +1,1 @@
+ALTER TABLE "pipeline_stage_counts" ADD COLUMN "opportunity_count" integer DEFAULT 0;

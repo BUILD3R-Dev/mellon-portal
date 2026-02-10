@@ -288,8 +288,10 @@ export async function normalizePipelineStages(
   // Only include Prospects (contact_type "1") to match CT's pipeline view
   const prospects = opportunities.filter((o) => o.contact_type === PROSPECT_CONTACT_TYPE);
 
-  // Group opportunities by stage, tracking count, dollar value, and source dates
+  // Group opportunities by stage, tracking count, opportunity count (with value),
+  // dollar value, and source dates
   const stageGroups = new Map<string, number>();
+  const stageOpportunityCounts = new Map<string, number>();
   const stageDollarValues = new Map<string, number>();
   const stageDates = new Map<string, (Date | null)[]>();
 
@@ -298,6 +300,9 @@ export async function normalizePipelineStages(
     const dollarVal = parseFloat(opp.deal_size || '0') || opp.value || 0;
     const sourceDate = parseSourceDate(opp.created || opp.last_modified_date);
     stageGroups.set(stage, (stageGroups.get(stage) || 0) + 1);
+    if (dollarVal > 0) {
+      stageOpportunityCounts.set(stage, (stageOpportunityCounts.get(stage) || 0) + 1);
+    }
     stageDollarValues.set(stage, (stageDollarValues.get(stage) || 0) + dollarVal);
     if (!stageDates.has(stage)) stageDates.set(stage, []);
     stageDates.get(stage)!.push(sourceDate);
@@ -315,13 +320,15 @@ export async function normalizePipelineStages(
       )
     );
 
-  // Insert stage counts with dollar values
+  // Insert stage counts with dollar values and opportunity counts
   for (const [stage, count] of stageGroups) {
     const dollarValue = stageDollarValues.get(stage) || 0;
+    const opportunityCount = stageOpportunityCounts.get(stage) || 0;
     await db.insert(schema.pipelineStageCounts).values({
       tenantId,
       stage,
       count,
+      opportunityCount,
       dollarValue: String(dollarValue),
       sourceCreatedAt: getEarliestSourceDate(stageDates.get(stage) || []),
     });
@@ -487,6 +494,7 @@ export async function createWeeklySnapshot(
       reportWeekId,
       stage: row.stage,
       count: row.count,
+      opportunityCount: row.opportunityCount,
       dollarValue: row.dollarValue,
       sourceCreatedAt: row.sourceCreatedAt,
     });
