@@ -2,68 +2,75 @@
 /**
  * Pipeline Dashboard Page
  *
- * Displays pipeline metrics with KPI cards and stage breakdown chart.
- * Shows total pipeline value, stage count, and average deal size.
+ * Displays pipeline metrics with KPI cards and a visual pipeline stage
+ * representation. Shows total pipeline value, stage count, and average
+ * deal size computed from pipelineStageCounts dollar values.
  */
 import DashboardLayout from '../layouts/DashboardLayout.astro';
 import { SyncStatusBanner } from '../components/dashboard/SyncStatusBanner';
 import { KPICard } from '../components/dashboard/KPICard';
-import { HorizontalBarChart } from '../components/dashboard/HorizontalBarChart';
-import { isActiveStage } from '@/lib/dashboard';
-import { db, pipelineStageCounts, hotListItems } from '@/lib/db';
-import { eq, sql } from 'drizzle-orm';
+import { PipelineStages } from '../components/dashboard/PipelineStages';
+import { isActiveStage, ACTIVE_PIPELINE_STAGES } from '@/lib/dashboard';
+import { db, pipelineStageCounts } from '@/lib/db';
+import { eq, and, isNull } from 'drizzle-orm';
 
 // Get tenant context from locals (set by middleware)
 const { tenantId } = Astro.locals;
 
-// Query pipeline stage counts for current tenant
-let stageCounts: Array<{
+// Query pipeline stage counts for current tenant (live data only)
+let stageRows: Array<{
   stage: string;
   count: number | null;
+  dollarValue: string | null;
 }> = [];
-
-// Query hot list items for pipeline value calculation
-let pipelineValue = 0;
-let dealCount = 0;
 
 if (tenantId) {
   try {
-    stageCounts = await db
+    stageRows = await db
       .select({
         stage: pipelineStageCounts.stage,
         count: pipelineStageCounts.count,
+        dollarValue: pipelineStageCounts.dollarValue,
       })
       .from(pipelineStageCounts)
-      .where(eq(pipelineStageCounts.tenantId, tenantId));
-
-    // Calculate total pipeline value from hot list items
-    const pipelineData = await db
-      .select({
-        totalValue: sql<string>`COALESCE(SUM(${hotListItems.weightedIff}), 0)`,
-        totalCount: sql<number>`COUNT(*)`,
-      })
-      .from(hotListItems)
-      .where(eq(hotListItems.tenantId, tenantId));
-
-    if (pipelineData.length > 0) {
-      pipelineValue = parseFloat(pipelineData[0].totalValue) || 0;
-      dealCount = pipelineData[0].totalCount || 0;
-    }
+      .where(
+        and(
+          eq(pipelineStageCounts.tenantId, tenantId),
+          isNull(pipelineStageCounts.reportWeekId)
+        )
+      );
   } catch (error) {
     console.error('Error fetching pipeline data:', error);
   }
 }
 
-// Prepare chart data - only include active pipeline stages
-const activeStageCounts = stageCounts.filter((s) => isActiveStage(s.stage));
+// Filter to active stages and sort by pipeline order
+const activeStages = stageRows
+  .filter((s) => isActiveStage(s.stage))
+  .sort((a, b) => {
+    const aIdx = ACTIVE_PIPELINE_STAGES.findIndex((s) => s.toLowerCase() === a.stage.toLowerCase());
+    const bIdx = ACTIVE_PIPELINE_STAGES.findIndex((s) => s.toLowerCase() === b.stage.toLowerCase());
+    return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
+  });
 
-const chartData = activeStageCounts.map((s) => ({
+// Prepare data for PipelineStages component
+const stageData = activeStages.map((s) => ({
   stage: s.stage,
   count: s.count || 0,
+  dollarValue: parseFloat(s.dollarValue || '0'),
 }));
 
-const stageCount = activeStageCounts.length;
-const averageDealSize = dealCount > 0 ? pipelineValue / dealCount : 0;
+// Compute KPIs from stage data
+let totalPipelineValue = 0;
+let totalDealCount = 0;
+
+for (const s of stageData) {
+  totalPipelineValue += s.dollarValue;
+  totalDealCount += s.count;
+}
+
+const stageCount = stageData.length;
+const averageDealSize = totalDealCount > 0 ? totalPipelineValue / totalDealCount : 0;
 
 // Format currency
 function formatCurrency(num: number): string {
@@ -95,8 +102,8 @@ function formatNumber(num: number): string {
       <KPICard
         client:load
         label="Total Pipeline Value"
-        value={formatCurrency(pipelineValue)}
-        subtitle="Weighted"
+        value={formatCurrency(totalPipelineValue)}
+        subtitle="All active stages"
       />
       <KPICard
         client:load
@@ -112,24 +119,20 @@ function formatNumber(num: number): string {
       />
     </div>
 
-    <!-- Stage Breakdown Chart -->
-    <div class="grid grid-cols-1 gap-6">
-      {chartData.length > 0 ? (
-        <HorizontalBarChart
-          client:load
-          data={chartData}
-          title="Opportunities by Stage"
-          height={Math.max(300, chartData.length * 50)}
-        />
-      ) : (
-        <div class="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 class="text-lg font-semibold text-gray-900 mb-4">Opportunities by Stage</h2>
-          <div class="h-64 flex items-center justify-center text-gray-400">
-            No pipeline data available
-          </div>
+    <!-- Pipeline Stage Visualization -->
+    {stageData.length > 0 ? (
+      <PipelineStages
+        client:load
+        data={stageData}
+      />
+    ) : (
+      <div class="bg-white rounded-xl border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Pipeline Stages</h2>
+        <div class="h-64 flex items-center justify-center text-gray-400">
+          No pipeline data available
         </div>
-      )}
-    </div>
+      </div>
+    )}
 
     <!-- Data Freshness Banner -->
     <SyncStatusBanner client:load />
