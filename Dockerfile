@@ -6,7 +6,7 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install ALL dependencies (including dev deps for migrations)
+# Install ALL dependencies (including dev deps for build tools)
 RUN npm install --legacy-peer-deps
 
 # Copy source code
@@ -14,6 +14,9 @@ COPY . .
 
 # Build the application
 RUN npm run build
+
+# Bundle the sync worker to standalone JS (no tsx needed at runtime)
+RUN npx esbuild worker/sync.ts --bundle --platform=node --format=esm --outfile=dist/sync-worker.mjs --external:postgres --external:node-cron --external:dotenv
 
 # Production stage
 FROM node:20-alpine AS runner
@@ -24,28 +27,25 @@ ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=4321
 
-# Copy built application and migration tools
+# Copy built application and dependencies
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
-COPY --from=builder /app/drizzle.config.ts ./
 COPY --from=builder /app/drizzle ./drizzle
-COPY --from=builder /app/src/lib/db ./src/lib/db
-COPY --from=builder /app/src/lib/clienttether ./src/lib/clienttether
-COPY --from=builder /app/worker ./worker
+COPY --from=builder /app/scripts ./scripts
 
 # Create startup script
 RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'echo "Running database migrations..."' >> /app/start.sh && \
-    echo 'node ./node_modules/drizzle-kit/bin.cjs push --config=drizzle.config.ts || echo "Migration warning (may already be applied)"' >> /app/start.sh && \
+    echo 'node /app/scripts/run-migrations.cjs' >> /app/start.sh && \
     echo 'echo "Starting sync worker in background..."' >> /app/start.sh && \
-    echo 'node ./node_modules/tsx/dist/cli.mjs worker/sync.ts --scheduled &' >> /app/start.sh && \
+    echo 'node /app/dist/sync-worker.mjs --scheduled &' >> /app/start.sh && \
     echo 'echo "Starting application..."' >> /app/start.sh && \
-    echo 'exec node ./dist/server/entry.mjs' >> /app/start.sh && \
+    echo 'exec node /app/dist/server/entry.mjs' >> /app/start.sh && \
     chmod +x /app/start.sh
 
 # Expose port
 EXPOSE 4321
 
-# Start with migrations
+# Start with migrations and sync worker
 CMD ["/app/start.sh"]
