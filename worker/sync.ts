@@ -149,22 +149,49 @@ export async function getTenantsWithWebKey(db: Database): Promise<TenantRecord[]
   return tenants as TenantRecord[];
 }
 
+/**
+ * Parses a date string from CT API, returning a Date or null.
+ */
+function parseSourceDate(dateStr?: string): Date | null {
+  if (!dateStr) return null;
+  const parsed = new Date(dateStr);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/**
+ * Returns the earliest source date from a group of leads/opportunities.
+ */
+function getEarliestSourceDate(dates: (Date | null)[]): Date | null {
+  const valid = dates.filter((d): d is Date => d !== null);
+  if (valid.length === 0) return null;
+  return valid.reduce((earliest, d) => (d < earliest ? d : earliest));
+}
+
 // Data normalization functions
 async function normalizeLeadMetrics(
   db: Database,
   tenantId: string,
   leads: CTLeadResponse[]
 ) {
-  // Group leads by source and status
+  // Group leads by source and status, tracking earliest creation dates
   const sourceGroups = new Map<string, number>();
   const statusGroups = new Map<string, number>();
+  const sourceDates = new Map<string, (Date | null)[]>();
+  const statusDates = new Map<string, (Date | null)[]>();
 
   for (const lead of leads) {
     const source = lead.clients_lead_source || lead.source || 'unknown';
     const status = lead.clients_sales_cycle || lead.status || 'unknown';
+    const sourceDate = parseSourceDate(lead.created || lead.last_modified_date);
 
     sourceGroups.set(source, (sourceGroups.get(source) || 0) + 1);
     statusGroups.set(status, (statusGroups.get(status) || 0) + 1);
+
+    if (!sourceDates.has(source)) sourceDates.set(source, []);
+    sourceDates.get(source)!.push(sourceDate);
+
+    if (!statusDates.has(status)) statusDates.set(status, []);
+    statusDates.get(status)!.push(sourceDate);
   }
 
   let recordsUpdated = 0;
@@ -186,6 +213,7 @@ async function normalizeLeadMetrics(
       dimensionType: 'source',
       dimensionValue: source,
       leads: count,
+      sourceCreatedAt: getEarliestSourceDate(sourceDates.get(source) || []),
     });
     recordsUpdated++;
   }
@@ -197,6 +225,7 @@ async function normalizeLeadMetrics(
       dimensionType: 'status',
       dimensionValue: status,
       leads: count,
+      sourceCreatedAt: getEarliestSourceDate(statusDates.get(status) || []),
     });
     recordsUpdated++;
   }
@@ -209,15 +238,19 @@ export async function normalizePipelineStages(
   tenantId: string,
   opportunities: CTOpportunityResponse[]
 ) {
-  // Group opportunities by stage, tracking both count and dollar value
+  // Group opportunities by stage, tracking count, dollar value, and source dates
   const stageGroups = new Map<string, number>();
   const stageDollarValues = new Map<string, number>();
+  const stageDates = new Map<string, (Date | null)[]>();
 
   for (const opp of opportunities) {
     const stage = opp.contact_sales_cycle || opp.stage || 'unknown';
     const dollarVal = parseFloat(opp.deal_size || '0') || opp.value || 0;
+    const sourceDate = parseSourceDate(opp.created || opp.last_modified_date);
     stageGroups.set(stage, (stageGroups.get(stage) || 0) + 1);
     stageDollarValues.set(stage, (stageDollarValues.get(stage) || 0) + dollarVal);
+    if (!stageDates.has(stage)) stageDates.set(stage, []);
+    stageDates.get(stage)!.push(sourceDate);
   }
 
   let recordsUpdated = 0;
@@ -240,6 +273,7 @@ export async function normalizePipelineStages(
       stage,
       count,
       dollarValue: String(dollarValue),
+      sourceCreatedAt: getEarliestSourceDate(stageDates.get(stage) || []),
     });
     recordsUpdated++;
   }
@@ -277,6 +311,7 @@ async function normalizeHotListItems(
       iff: String(item.value || 0),
       weightedIff: String((item.value || 0) * ((item.probability || 0) / 100)),
       rawJson: item,
+      sourceCreatedAt: parseSourceDate(item.created || item.last_modified_date),
     });
     recordsUpdated++;
   }
@@ -377,6 +412,7 @@ export async function createWeeklySnapshot(
       cost: row.cost,
       leads: row.leads,
       qualifiedLeads: row.qualifiedLeads,
+      sourceCreatedAt: row.sourceCreatedAt,
     });
     snapshotCount++;
   }
@@ -400,6 +436,7 @@ export async function createWeeklySnapshot(
       stage: row.stage,
       count: row.count,
       dollarValue: row.dollarValue,
+      sourceCreatedAt: row.sourceCreatedAt,
     });
     snapshotCount++;
   }

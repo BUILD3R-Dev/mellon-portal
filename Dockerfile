@@ -31,11 +31,15 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/drizzle.config.ts ./
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/src/lib/db ./src/lib/db
+COPY --from=builder /app/src/lib/clienttether ./src/lib/clienttether
+COPY --from=builder /app/worker ./worker
 
 # Create startup script
 RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'echo "Running database migrations..."' >> /app/start.sh && \
     echo 'node ./node_modules/drizzle-kit/bin.cjs push --config=drizzle.config.ts || echo "Migration warning (may already be applied)"' >> /app/start.sh && \
+    echo 'echo "Starting sync worker in background..."' >> /app/start.sh && \
+    echo 'node ./node_modules/tsx/dist/cli.mjs worker/sync.ts --scheduled &' >> /app/start.sh && \
     echo 'echo "Starting application..."' >> /app/start.sh && \
     echo 'exec node ./dist/server/entry.mjs' >> /app/start.sh && \
     chmod +x /app/start.sh

@@ -148,6 +148,7 @@ export const leadMetrics = pgTable('lead_metrics', {
   cost: decimal('cost', { precision: 12, scale: 2 }).default('0'),
   leads: integer('leads').default(0),
   qualifiedLeads: integer('qualified_leads').default(0),
+  sourceCreatedAt: timestamp('source_created_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => [
   index('lead_metrics_tenant_id_idx').on(table.tenantId),
@@ -161,6 +162,7 @@ export const pipelineStageCounts = pgTable('pipeline_stage_counts', {
   stage: varchar('stage', { length: 100 }).notNull(),
   count: integer('count').default(0),
   dollarValue: decimal('dollar_value', { precision: 12, scale: 2 }).default('0'),
+  sourceCreatedAt: timestamp('source_created_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => [
   index('pipeline_stage_counts_tenant_id_idx').on(table.tenantId),
@@ -181,6 +183,7 @@ export const hotListItems = pgTable('hot_list_items', {
   stage: varchar('stage', { length: 100 }),
   likelyPct: integer('likely_pct').default(0),
   rawJson: jsonb('raw_json'),
+  sourceCreatedAt: timestamp('source_created_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
