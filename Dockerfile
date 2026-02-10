@@ -16,7 +16,7 @@ COPY . .
 RUN npm run build
 
 # Bundle the sync worker to standalone JS (no tsx needed at runtime)
-RUN npx esbuild worker/sync.ts --bundle --platform=node --format=esm --outfile=dist/sync-worker.mjs --external:postgres --external:node-cron --external:dotenv
+RUN npx esbuild worker/sync.ts --bundle --platform=node --format=esm --outfile=dist/sync-worker.mjs --external:postgres --external:node-cron
 
 # Production stage
 FROM node:20-alpine AS runner
