@@ -12,6 +12,9 @@ export default defineConfig({
 
   vite: {
     plugins: [tailwindcss()],
+    ssr: {
+      noExternal: ['echarts-for-react', 'echarts'],
+    },
   },
 
   adapter: node({

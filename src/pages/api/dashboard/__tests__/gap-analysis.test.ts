@@ -31,6 +31,7 @@ vi.mock('@/lib/db', () => ({
     dimensionType: 'dimensionType',
     leads: 'leads',
     createdAt: 'createdAt',
+    sourceCreatedAt: 'sourceCreatedAt',
   },
   reportWeeks: { id: 'id', weekEndingDate: 'weekEndingDate' },
 }));
@@ -147,14 +148,13 @@ describe('Gap Analysis: KPI Endpoint', () => {
           }),
         };
       }
-      // Pipeline with a mix of stages: some in full pipeline, one outside
+      // Pipeline with a mix of stages
       return {
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([
             { stage: 'New Lead', count: 5, dollarValue: '25000.00' },
             { stage: 'QR Returned', count: 3, dollarValue: '90000.00' },
             { stage: 'FA Sent', count: 1, dollarValue: '30000.00' },
-            // Stage outside full pipeline range (should NOT be included in weighted value)
             { stage: 'Closed Won', count: 2, dollarValue: '200000.00' },
           ]),
         }),
@@ -173,13 +173,13 @@ describe('Gap Analysis: KPI Endpoint', () => {
 
     expect(response.status).toBe(200);
     expect(data.success).toBe(true);
-    // 25000 + 90000 + 30000 = 145000 (Closed Won excluded)
-    expect(data.data.weightedPipelineValue).toBe('145000.00');
+    // All stages included in weighted value: 25000 + 90000 + 30000 + 200000 = 345000
+    expect(data.data.weightedPipelineValue).toBe('345000.00');
     // Total pipeline includes all stages: 5 + 3 + 1 + 2 = 11
     expect(data.data.totalPipeline).toBe(11);
   });
 
-  it('priority candidates stage list matches the spec (QR Returned through FA Sent)', async () => {
+  it('priority candidates excludes early-funnel stages (New Lead, Inbound Contact, Outbound Call)', async () => {
     setupAuthenticatedMocks();
 
     let selectCallCount = 0;
@@ -192,19 +192,16 @@ describe('Gap Analysis: KPI Endpoint', () => {
           }),
         };
       }
-      // One contact in each priority stage
       return {
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([
-            { stage: 'QR Returned', count: 1, dollarValue: '10000' },
-            { stage: 'FDD Sent', count: 2, dollarValue: '20000' },
-            { stage: 'FDD Signed', count: 3, dollarValue: '30000' },
-            { stage: 'FDD Review Call Sched.', count: 4, dollarValue: '40000' },
-            { stage: 'FDD Review Call Compl.', count: 5, dollarValue: '50000' },
-            { stage: 'FA Sent', count: 6, dollarValue: '60000' },
-            // These are NOT priority candidates
+            { stage: 'Discovery Day Booked', count: 3, dollarValue: '30000' },
+            { stage: 'Initial Call Complete', count: 5, dollarValue: '50000' },
+            { stage: 'FA Signed', count: 2, dollarValue: '60000' },
+            // Early-funnel stages - NOT priority candidates
             { stage: 'New Lead', count: 10, dollarValue: '5000' },
-            { stage: 'QR', count: 8, dollarValue: '3000' },
+            { stage: 'Inbound Contact', count: 8, dollarValue: '3000' },
+            { stage: 'Outbound Call', count: 4, dollarValue: '2000' },
           ]),
         }),
       };
@@ -221,11 +218,11 @@ describe('Gap Analysis: KPI Endpoint', () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    // Priority = QR Returned(1) + FDD Sent(2) + FDD Signed(3) + FDD Review Call Sched.(4) + FDD Review Call Compl.(5) + FA Sent(6) = 21
-    expect(data.data.priorityCandidates).toBe(21);
-    // New Lead and QR are NOT included in priority candidates
-    // Total pipeline includes everything: 1+2+3+4+5+6+10+8 = 39
-    expect(data.data.totalPipeline).toBe(39);
+    // Priority = Discovery Day Booked(3) + Initial Call Complete(5) + FA Signed(2) = 10
+    // Early-funnel excluded: New Lead(10) + Inbound Contact(8) + Outbound Call(4)
+    expect(data.data.priorityCandidates).toBe(10);
+    // Total pipeline includes everything: 3+5+2+10+8+4 = 32
+    expect(data.data.totalPipeline).toBe(32);
   });
 });
 

@@ -9,30 +9,15 @@
 import { db, pipelineStageCounts, leadMetrics, reportWeeks } from '@/lib/db';
 import { eq, and, isNull, isNotNull, desc, sql, gte } from 'drizzle-orm';
 
-/** Stages used for Priority Candidates: QR Returned through FA Sent */
-export const PRIORITY_STAGES = [
-  'QR Returned',
-  'FDD Sent',
-  'FDD Signed',
-  'FDD Review Call Sched.',
-  'FDD Review Call Compl.',
-  'FA Sent',
-];
-
-/** Full pipeline stages used for Weighted Pipeline Value: New Lead through FA Sent */
-export const FULL_PIPELINE_STAGES = [
-  'New Lead',
-  'Outbound Call',
-  'Inbound Contact',
-  'Initial Call Scheduled',
-  'Initial Call Complete',
-  'QR',
-  'QR Returned',
-  'FDD Sent',
-  'FDD Signed',
-  'FDD Review Call Sched.',
-  'FDD Review Call Compl.',
-  'FA Sent',
+/**
+ * Early-funnel stages that are excluded from the "Priority Candidates" count.
+ * Everything NOT in this list is considered a priority candidate.
+ * These are matched case-insensitively against the stage values from ClientTether.
+ */
+export const EARLY_FUNNEL_STAGES = [
+  'new lead',
+  'inbound contact',
+  'outbound call',
 ];
 
 /** KPI data shape returned by getKPIData */
@@ -131,6 +116,8 @@ export async function getKPIData(
   }
 
   // Live mode: query current data (reportWeekId IS NULL)
+  // Use sourceCreatedAt (actual CT lead creation date) for the time filter
+  // since sync deletes/re-inserts all data, resetting createdAt each run
   const newLeadsResult = await db
     .select({
       totalLeads: sql<number>`coalesce(sum(${leadMetrics.leads}), 0)`,
@@ -141,7 +128,7 @@ export async function getKPIData(
         eq(leadMetrics.tenantId, tenantId),
         isNull(leadMetrics.reportWeekId),
         eq(leadMetrics.dimensionType, 'status'),
-        gte(leadMetrics.createdAt, newLeadsStartDate)
+        gte(leadMetrics.sourceCreatedAt, newLeadsStartDate)
       )
     );
 
@@ -176,13 +163,12 @@ function calculateKPIs(
     const dollarValue = parseFloat(row.dollarValue ?? '0');
 
     totalPipeline += count;
+    weightedPipelineValue += dollarValue;
 
-    if (PRIORITY_STAGES.includes(row.stage)) {
+    // Priority candidates = anything past early-funnel stages
+    const stageLower = row.stage.toLowerCase();
+    if (!EARLY_FUNNEL_STAGES.includes(stageLower)) {
       priorityCandidates += count;
-    }
-
-    if (FULL_PIPELINE_STAGES.includes(row.stage)) {
-      weightedPipelineValue += dollarValue;
     }
   }
 

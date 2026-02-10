@@ -190,13 +190,13 @@ export function DashboardIsland() {
         <KPICard
           label="Priority Candidates"
           value={kpiData ? String(kpiData.priorityCandidates) : '--'}
-          subtitle="QR Returned through FA Sent"
+          subtitle="Past early-funnel stages"
           loading={kpiLoading}
         />
         <KPICard
           label="Weighted Pipeline Value"
           value={kpiData ? formatDollarAmount(kpiData.weightedPipelineValue) : '--'}
-          subtitle="New Lead through FA Sent"
+          subtitle="All pipeline stages"
           loading={kpiLoading}
         />
       </div>

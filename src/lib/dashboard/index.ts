@@ -10,8 +10,7 @@ export {
   getKPIData,
   getPipelineByStage,
   getLeadTrends,
-  PRIORITY_STAGES,
-  FULL_PIPELINE_STAGES,
+  EARLY_FUNNEL_STAGES,
 } from './queries';
 
 export type {
