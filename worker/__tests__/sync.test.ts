@@ -196,9 +196,9 @@ describe('Sync Worker', () => {
       };
 
       const opportunities = [
-        { id: '1', stage: 'New Lead', value: 50000 },
-        { id: '2', stage: 'New Lead', value: 30000 },
-        { id: '3', stage: 'FDD Sent', value: 90000 },
+        { id: '1', stage: 'New Lead', value: 50000, contact_type: '1' },
+        { id: '2', stage: 'New Lead', value: 30000, contact_type: '1' },
+        { id: '3', stage: 'FDD Sent', value: 90000, contact_type: '1' },
       ];
 
       await normalizePipelineStages(mockDb as any, 'tenant-abc', opportunities);
@@ -230,8 +230,8 @@ describe('Sync Worker', () => {
       };
 
       const opportunities = [
-        { id: '1', stage: 'New Lead' },
-        { id: '2', stage: 'New Lead' },
+        { id: '1', stage: 'New Lead', contact_type: '1' },
+        { id: '2', stage: 'New Lead', contact_type: '1' },
       ];
 
       await normalizePipelineStages(mockDb as any, 'tenant-abc', opportunities);

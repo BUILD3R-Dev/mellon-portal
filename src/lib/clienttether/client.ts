@@ -45,6 +45,7 @@ export interface CTOpportunityResponse {
   last_modified_date?: string;
   contact_lead_source?: string;
   contact_action_plan?: string;
+  contact_type?: string;
   // Legacy aliases
   id?: string;
   title?: string;

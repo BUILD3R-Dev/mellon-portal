@@ -28,11 +28,11 @@ describe('Gap Analysis: normalizePipelineStages mixed values', () => {
     };
 
     const opportunities = [
-      { id: '1', stage: 'New Lead', value: 50000 },
-      { id: '2', stage: 'New Lead' },              // No value field at all
-      { id: '3', stage: 'New Lead', value: 0 },    // Explicit zero
-      { id: '4', stage: 'FDD Sent', value: 90000 },
-      { id: '5', stage: 'FDD Sent' },              // No value field
+      { id: '1', stage: 'New Lead', value: 50000, contact_type: '1' },
+      { id: '2', stage: 'New Lead', contact_type: '1' },              // No value field at all
+      { id: '3', stage: 'New Lead', value: 0, contact_type: '1' },    // Explicit zero
+      { id: '4', stage: 'FDD Sent', value: 90000, contact_type: '1' },
+      { id: '5', stage: 'FDD Sent', contact_type: '1' },              // No value field
     ];
 
     await normalizePipelineStages(mockDb as any, 'tenant-abc', opportunities);

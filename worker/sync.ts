@@ -166,19 +166,25 @@ function getEarliestSourceDate(dates: (Date | null)[]): Date | null {
   return valid.reduce((earliest, d) => (d < earliest ? d : earliest));
 }
 
+/** CT contact_type "1" = Prospect (shown in CT's active pipeline view) */
+const PROSPECT_CONTACT_TYPE = '1';
+
 // Data normalization functions
 async function normalizeLeadMetrics(
   db: Database,
   tenantId: string,
   leads: CTLeadResponse[]
 ) {
+  // Only include Prospects (contact_type "1") to match CT's pipeline view
+  const prospects = leads.filter((l) => l.contact_type === PROSPECT_CONTACT_TYPE);
+
   // Group leads by source and status, tracking earliest creation dates
   const sourceGroups = new Map<string, number>();
   const statusGroups = new Map<string, number>();
   const sourceDates = new Map<string, (Date | null)[]>();
   const statusDates = new Map<string, (Date | null)[]>();
 
-  for (const lead of leads) {
+  for (const lead of prospects) {
     const source = lead.clients_lead_source || lead.source || 'unknown';
     const status = lead.clients_sales_cycle || lead.status || 'New Lead';
     const sourceDate = parseSourceDate(lead.created || lead.last_modified_date);
@@ -237,12 +243,15 @@ export async function normalizePipelineStages(
   tenantId: string,
   opportunities: CTOpportunityResponse[]
 ) {
+  // Only include Prospects (contact_type "1") to match CT's pipeline view
+  const prospects = opportunities.filter((o) => o.contact_type === PROSPECT_CONTACT_TYPE);
+
   // Group opportunities by stage, tracking count, dollar value, and source dates
   const stageGroups = new Map<string, number>();
   const stageDollarValues = new Map<string, number>();
   const stageDates = new Map<string, (Date | null)[]>();
 
-  for (const opp of opportunities) {
+  for (const opp of prospects) {
     const stage = opp.contact_sales_cycle || opp.stage || 'New Lead';
     const dollarVal = parseFloat(opp.deal_size || '0') || opp.value || 0;
     const sourceDate = parseSourceDate(opp.created || opp.last_modified_date);
@@ -285,8 +294,10 @@ async function normalizeHotListItems(
   tenantId: string,
   opportunities: CTOpportunityResponse[]
 ) {
-  // Filter for high-probability opportunities (hot list items)
-  const hotItems = opportunities.filter((opp) => (opp.probability || 0) >= 50);
+  // Filter for high-probability prospect opportunities (hot list items)
+  const hotItems = opportunities.filter(
+    (opp) => opp.contact_type === PROSPECT_CONTACT_TYPE && (opp.probability || 0) >= 50
+  );
 
   let recordsUpdated = 0;
 
