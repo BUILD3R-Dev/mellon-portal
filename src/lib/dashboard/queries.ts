@@ -10,9 +10,24 @@ import { db, pipelineStageCounts, leadMetrics, reportWeeks } from '@/lib/db';
 import { eq, and, isNull, isNotNull, desc, sql, gte } from 'drizzle-orm';
 
 /**
+ * Inactive/closed pipeline stages excluded from all pipeline counts.
+ * These contacts are no longer actively progressing through the sales funnel.
+ * Matched case-insensitively against stage values from ClientTether.
+ */
+export const INACTIVE_PIPELINE_STAGES = [
+  'not interested',
+  'never responded',
+  'bad lead',
+  'bad fit',
+  'lost - territory not available',
+  'future interest',
+  'unknown',
+];
+
+/**
  * Early-funnel stages that are excluded from the "Priority Candidates" count.
- * Everything NOT in this list is considered a priority candidate.
- * These are matched case-insensitively against the stage values from ClientTether.
+ * Everything active that is NOT in this list is considered a priority candidate.
+ * Matched case-insensitively against the stage values from ClientTether.
  */
 export const EARLY_FUNNEL_STAGES = [
   'new lead',
@@ -161,12 +176,17 @@ function calculateKPIs(
   for (const row of pipelineRows) {
     const count = row.count ?? 0;
     const dollarValue = parseFloat(row.dollarValue ?? '0');
+    const stageLower = row.stage.toLowerCase();
+
+    // Skip inactive/closed stages entirely
+    if (INACTIVE_PIPELINE_STAGES.includes(stageLower)) {
+      continue;
+    }
 
     totalPipeline += count;
     weightedPipelineValue += dollarValue;
 
     // Priority candidates = anything past early-funnel stages
-    const stageLower = row.stage.toLowerCase();
     if (!EARLY_FUNNEL_STAGES.includes(stageLower)) {
       priorityCandidates += count;
     }
@@ -207,10 +227,12 @@ export async function getPipelineByStage(
     .from(pipelineStageCounts)
     .where(and(...conditions));
 
-  return stageRows.map((row) => ({
-    stage: row.stage,
-    count: row.count ?? 0,
-  }));
+  return stageRows
+    .filter((row) => !INACTIVE_PIPELINE_STAGES.includes(row.stage.toLowerCase()))
+    .map((row) => ({
+      stage: row.stage,
+      count: row.count ?? 0,
+    }));
 }
 
 /**

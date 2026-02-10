@@ -148,14 +148,16 @@ describe('Gap Analysis: KPI Endpoint', () => {
           }),
         };
       }
-      // Pipeline with a mix of stages
+      // Pipeline with a mix of active and inactive stages
       return {
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([
             { stage: 'New Lead', count: 5, dollarValue: '25000.00' },
-            { stage: 'QR Returned', count: 3, dollarValue: '90000.00' },
-            { stage: 'FA Sent', count: 1, dollarValue: '30000.00' },
-            { stage: 'Closed Won', count: 2, dollarValue: '200000.00' },
+            { stage: 'Initial Call Complete', count: 3, dollarValue: '90000.00' },
+            { stage: 'FA Signed', count: 1, dollarValue: '30000.00' },
+            // Inactive stage - should be excluded from totals
+            { stage: 'Not Interested', count: 20, dollarValue: '0' },
+            { stage: 'Bad Lead', count: 8, dollarValue: '0' },
           ]),
         }),
       };
@@ -173,10 +175,10 @@ describe('Gap Analysis: KPI Endpoint', () => {
 
     expect(response.status).toBe(200);
     expect(data.success).toBe(true);
-    // All stages included in weighted value: 25000 + 90000 + 30000 + 200000 = 345000
-    expect(data.data.weightedPipelineValue).toBe('345000.00');
-    // Total pipeline includes all stages: 5 + 3 + 1 + 2 = 11
-    expect(data.data.totalPipeline).toBe(11);
+    // Only active stages: 25000 + 90000 + 30000 = 145000 (Not Interested & Bad Lead excluded)
+    expect(data.data.weightedPipelineValue).toBe('145000.00');
+    // Total pipeline excludes inactive: 5 + 3 + 1 = 9 (Not Interested 20 + Bad Lead 8 excluded)
+    expect(data.data.totalPipeline).toBe(9);
   });
 
   it('priority candidates excludes early-funnel stages (New Lead, Inbound Contact, Outbound Call)', async () => {
@@ -198,10 +200,13 @@ describe('Gap Analysis: KPI Endpoint', () => {
             { stage: 'Discovery Day Booked', count: 3, dollarValue: '30000' },
             { stage: 'Initial Call Complete', count: 5, dollarValue: '50000' },
             { stage: 'FA Signed', count: 2, dollarValue: '60000' },
-            // Early-funnel stages - NOT priority candidates
+            // Early-funnel stages - NOT priority candidates but still active
             { stage: 'New Lead', count: 10, dollarValue: '5000' },
             { stage: 'Inbound Contact', count: 8, dollarValue: '3000' },
             { stage: 'Outbound Call', count: 4, dollarValue: '2000' },
+            // Inactive stages - excluded from everything
+            { stage: 'Not Interested', count: 50, dollarValue: '0' },
+            { stage: 'Never Responded', count: 20, dollarValue: '0' },
           ]),
         }),
       };
@@ -219,9 +224,10 @@ describe('Gap Analysis: KPI Endpoint', () => {
 
     expect(response.status).toBe(200);
     // Priority = Discovery Day Booked(3) + Initial Call Complete(5) + FA Signed(2) = 10
-    // Early-funnel excluded: New Lead(10) + Inbound Contact(8) + Outbound Call(4)
+    // Early-funnel (active but not priority): New Lead(10) + Inbound Contact(8) + Outbound Call(4)
+    // Inactive (excluded entirely): Not Interested(50) + Never Responded(20)
     expect(data.data.priorityCandidates).toBe(10);
-    // Total pipeline includes everything: 3+5+2+10+8+4 = 32
+    // Total pipeline = active only: 3+5+2+10+8+4 = 32 (inactive 70 excluded)
     expect(data.data.totalPipeline).toBe(32);
   });
 });
