@@ -3,28 +3,26 @@
  * Leads Dashboard Page
  *
  * Displays lead metrics with KPI cards and ECharts visualizations.
- * Shows leads by source (bar chart) and leads by status (pie chart).
+ * Shows leads by source (horizontal bar chart) and leads by status (pie chart).
+ * Only includes active pipeline stages, consistent with the Pipeline page.
  */
 import DashboardLayout from '../layouts/DashboardLayout.astro';
 import { SyncStatusBanner } from '../components/dashboard/SyncStatusBanner';
 import { KPICard } from '../components/dashboard/KPICard';
-import { LeadsChart } from '../components/dashboard/LeadsChart';
+import { HorizontalBarChart } from '../components/dashboard/HorizontalBarChart';
 import { PieChart } from '../components/dashboard/PieChart';
+import { isActiveStage } from '@/lib/dashboard';
 import { db, leadMetrics } from '@/lib/db';
-import { eq } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 
 // Get tenant context from locals (set by middleware)
 const { tenantId } = Astro.locals;
 
-// Query lead metrics for current tenant
+// Query live lead metrics for current tenant (reportWeekId IS NULL = current data)
 let metrics: Array<{
   dimensionType: string;
   dimensionValue: string;
   leads: number | null;
-  qualifiedLeads: number | null;
-  clicks: number | null;
-  impressions: number | null;
-  cost: string | null;
 }> = [];
 
 if (tenantId) {
@@ -34,49 +32,52 @@ if (tenantId) {
         dimensionType: leadMetrics.dimensionType,
         dimensionValue: leadMetrics.dimensionValue,
         leads: leadMetrics.leads,
-        qualifiedLeads: leadMetrics.qualifiedLeads,
-        clicks: leadMetrics.clicks,
-        impressions: leadMetrics.impressions,
-        cost: leadMetrics.cost,
       })
       .from(leadMetrics)
-      .where(eq(leadMetrics.tenantId, tenantId));
+      .where(
+        and(
+          eq(leadMetrics.tenantId, tenantId),
+          isNull(leadMetrics.reportWeekId)
+        )
+      );
   } catch (error) {
     console.error('Error fetching lead metrics:', error);
   }
 }
 
-// Aggregate totals
-let totalLeads = 0;
-let totalQualifiedLeads = 0;
-const sourceSet = new Set<string>();
-
-// Prepare chart data
-const bySource: Array<{ source: string; leads: number }> = [];
+// Prepare chart data from source and status dimensions only
+const bySource: Array<{ stage: string; count: number }> = [];
 const byStatus: Array<{ name: string; value: number }> = [];
+let totalProspects = 0;
+let activeProspects = 0;
 
 for (const metric of metrics) {
   const leads = metric.leads || 0;
-  const qualifiedLeads = metric.qualifiedLeads || 0;
-
-  totalLeads += leads;
-  totalQualifiedLeads += qualifiedLeads;
 
   if (metric.dimensionType === 'source') {
-    sourceSet.add(metric.dimensionValue);
     bySource.push({
-      source: metric.dimensionValue,
-      leads: leads,
+      stage: metric.dimensionValue,
+      count: leads,
     });
   } else if (metric.dimensionType === 'status') {
-    byStatus.push({
-      name: metric.dimensionValue,
-      value: leads,
-    });
+    totalProspects += leads;
+    if (isActiveStage(metric.dimensionValue)) {
+      activeProspects += leads;
+      byStatus.push({
+        name: metric.dimensionValue,
+        value: leads,
+      });
+    }
   }
 }
 
-const leadSourcesCount = sourceSet.size;
+// Sort sources by count descending
+bySource.sort((a, b) => b.count - a.count);
+
+// Sort status by value descending for cleaner pie chart
+byStatus.sort((a, b) => b.value - a.value);
+
+const leadSourcesCount = bySource.length;
 
 // Format numbers with commas
 function formatNumber(num: number): string {
@@ -97,15 +98,15 @@ function formatNumber(num: number): string {
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <KPICard
         client:load
-        label="Total Leads"
-        value={formatNumber(totalLeads)}
-        subtitle="All time"
+        label="Total Prospects"
+        value={formatNumber(totalProspects)}
+        subtitle="All statuses"
       />
       <KPICard
         client:load
-        label="Qualified Leads"
-        value={formatNumber(totalQualifiedLeads)}
-        subtitle="All time"
+        label="Active in Pipeline"
+        value={formatNumber(activeProspects)}
+        subtitle="Active stages only"
       />
       <KPICard
         client:load
@@ -118,11 +119,11 @@ function formatNumber(num: number): string {
     <!-- Charts Section -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {bySource.length > 0 ? (
-        <LeadsChart
+        <HorizontalBarChart
           client:load
           data={bySource}
           title="Leads by Source"
-          height={300}
+          height={Math.max(300, bySource.length * 40)}
         />
       ) : (
         <div class="bg-white rounded-xl border border-gray-200 p-6">
@@ -138,7 +139,7 @@ function formatNumber(num: number): string {
           client:load
           data={byStatus}
           title="Leads by Status"
-          height={300}
+          height={Math.max(300, byStatus.length * 25)}
         />
       ) : (
         <div class="bg-white rounded-xl border border-gray-200 p-6">
