@@ -16,7 +16,6 @@
  * 5. On Sundays, create weekly snapshots linked to reportWeeks
  */
 
-import 'dotenv/config';
 import cron from 'node-cron';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
