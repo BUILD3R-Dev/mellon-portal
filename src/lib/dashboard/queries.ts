@@ -10,22 +10,43 @@ import { db, pipelineStageCounts, leadMetrics, reportWeeks } from '@/lib/db';
 import { eq, and, isNull, isNotNull, desc, sql, gte } from 'drizzle-orm';
 
 /**
- * Inactive/closed pipeline stages excluded from all pipeline counts.
- * These contacts are no longer actively progressing through the sales funnel.
- * Matched case-insensitively against stage values from ClientTether.
+ * Active pipeline stages in ClientTether pipeline order.
+ * Derived from CT read_sales_cycle_list API (sales_cycle_active_status = "1").
+ * Stages not in this list are considered inactive and excluded from pipeline counts.
+ * "New Lead" is a virtual stage for contacts with blank sales_cycle.
  */
-export const INACTIVE_PIPELINE_STAGES = [
-  'not interested',
-  'never responded',
-  'bad lead',
-  'bad fit',
-  'lost - territory not available',
+export const ACTIVE_PIPELINE_STAGES = [
+  'New Lead',
+  'Outbound Call',
+  'Inbound Contact',
+  'Initial Call Scheduled',
+  'Initial Call Complete',
+  'QR Sent',
+  'QR Returned',
+  'FDD Sent',
+  'FDD Signed',
+  'FDD Review Call Scheduled',
+  'FDD Review Call Complete',
+  'Deal Structure',
+  'Discovery Day Booked',
+  'Discovery Day Completed',
+  'FA Requested',
+  'FA Sent',
+  'FA Signed',
+  'Future Interest',
 ];
 
+/** Lowercase lookup set for fast active stage checking */
+const ACTIVE_STAGES_LOWER = new Set(ACTIVE_PIPELINE_STAGES.map((s) => s.toLowerCase()));
+
+/** Check if a stage is active (in the CT pipeline) */
+export function isActiveStage(stage: string): boolean {
+  return ACTIVE_STAGES_LOWER.has(stage.toLowerCase());
+}
+
 /**
- * Early-funnel stages that are excluded from the "Priority Candidates" count.
+ * Early-funnel stages excluded from the "Priority Candidates" count.
  * Everything active that is NOT in this list is considered a priority candidate.
- * Matched case-insensitively against the stage values from ClientTether.
  */
 export const EARLY_FUNNEL_STAGES = [
   'new lead',
@@ -177,7 +198,7 @@ function calculateKPIs(
     const stageLower = row.stage.toLowerCase();
 
     // Skip inactive/closed stages entirely
-    if (INACTIVE_PIPELINE_STAGES.includes(stageLower)) {
+    if (!isActiveStage(row.stage)) {
       continue;
     }
 
@@ -226,7 +247,12 @@ export async function getPipelineByStage(
     .where(and(...conditions));
 
   return stageRows
-    .filter((row) => !INACTIVE_PIPELINE_STAGES.includes(row.stage.toLowerCase()))
+    .filter((row) => isActiveStage(row.stage))
+    .sort((a, b) => {
+      const aIdx = ACTIVE_PIPELINE_STAGES.findIndex((s) => s.toLowerCase() === a.stage.toLowerCase());
+      const bIdx = ACTIVE_PIPELINE_STAGES.findIndex((s) => s.toLowerCase() === b.stage.toLowerCase());
+      return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
+    })
     .map((row) => ({
       stage: row.stage,
       count: row.count ?? 0,

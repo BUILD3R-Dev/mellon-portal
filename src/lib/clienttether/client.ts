@@ -54,6 +54,16 @@ export interface CTOpportunityResponse {
   probability?: number;
 }
 
+export interface CTSalesCycleResponse {
+  sales_cycle_id: string;
+  sales_cycle_name: string;
+  sales_cycle_active_status: string;
+  sales_cycle_order: string;
+  likelihood_to_close: string;
+  contact_type: string;
+  contact_type_name: string;
+}
+
 export interface CTNoteResponse {
   id: string;
   contact_id: string;
@@ -160,8 +170,8 @@ export class ClientTetherClient {
     return this.requestAllPages<CTOpportunityResponse>('read_opportunity_list');
   }
 
-  async getSalesCycles(): Promise<ApiResponse<unknown[]>> {
-    return this.request<unknown[]>('read_sales_cycle_list');
+  async getSalesCycles(): Promise<ApiResponse<CTSalesCycleResponse[]>> {
+    return this.request<CTSalesCycleResponse[]>('read_sales_cycle_list');
   }
 
   async getEvents(params?: { startDate?: string; endDate?: string }): Promise<ApiResponse<unknown[]>> {

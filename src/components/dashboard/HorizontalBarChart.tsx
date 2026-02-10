@@ -33,8 +33,8 @@ export function HorizontalBarChart({
   height = 300,
   className,
 }: HorizontalBarChartProps) {
-  // Sort data by count descending for better visualization
-  const sortedData = [...data].sort((a, b) => b.count - a.count);
+  // Reverse so ECharts renders the first item at the top of the y-axis
+  const chartData = [...data].reverse();
 
   const option = {
     title: {
@@ -72,7 +72,7 @@ export function HorizontalBarChart({
     },
     yAxis: {
       type: 'category',
-      data: sortedData.map((d) => d.stage),
+      data: chartData.map((d) => d.stage),
       axisLabel: {
         color: '#6B7280',
         width: 100,
@@ -88,7 +88,7 @@ export function HorizontalBarChart({
       {
         name: 'Count',
         type: 'bar',
-        data: sortedData.map((d) => d.count),
+        data: chartData.map((d) => d.count),
         itemStyle: {
           color: '#10B981',
           borderRadius: [0, 4, 4, 0],

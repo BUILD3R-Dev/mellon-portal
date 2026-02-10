@@ -9,7 +9,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
 import { SyncStatusBanner } from '../components/dashboard/SyncStatusBanner';
 import { KPICard } from '../components/dashboard/KPICard';
 import { HorizontalBarChart } from '../components/dashboard/HorizontalBarChart';
-import { INACTIVE_PIPELINE_STAGES } from '@/lib/dashboard';
+import { isActiveStage } from '@/lib/dashboard';
 import { db, pipelineStageCounts, hotListItems } from '@/lib/db';
 import { eq, sql } from 'drizzle-orm';
 
@@ -54,10 +54,8 @@ if (tenantId) {
   }
 }
 
-// Prepare chart data - filter out inactive/closed stages
-const activeStageCounts = stageCounts.filter(
-  (s) => !INACTIVE_PIPELINE_STAGES.includes(s.stage.toLowerCase())
-);
+// Prepare chart data - only include active pipeline stages
+const activeStageCounts = stageCounts.filter((s) => isActiveStage(s.stage));
 
 const chartData = activeStageCounts.map((s) => ({
   stage: s.stage,
