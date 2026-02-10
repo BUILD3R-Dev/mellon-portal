@@ -180,7 +180,7 @@ async function normalizeLeadMetrics(
 
   for (const lead of leads) {
     const source = lead.clients_lead_source || lead.source || 'unknown';
-    const status = lead.clients_sales_cycle || lead.status || 'unknown';
+    const status = lead.clients_sales_cycle || lead.status || 'New Lead';
     const sourceDate = parseSourceDate(lead.created || lead.last_modified_date);
 
     sourceGroups.set(source, (sourceGroups.get(source) || 0) + 1);
@@ -243,7 +243,7 @@ export async function normalizePipelineStages(
   const stageDates = new Map<string, (Date | null)[]>();
 
   for (const opp of opportunities) {
-    const stage = opp.contact_sales_cycle || opp.stage || 'unknown';
+    const stage = opp.contact_sales_cycle || opp.stage || 'New Lead';
     const dollarVal = parseFloat(opp.deal_size || '0') || opp.value || 0;
     const sourceDate = parseSourceDate(opp.created || opp.last_modified_date);
     stageGroups.set(stage, (stageGroups.get(stage) || 0) + 1);

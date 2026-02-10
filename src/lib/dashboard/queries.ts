@@ -20,8 +20,6 @@ export const INACTIVE_PIPELINE_STAGES = [
   'bad lead',
   'bad fit',
   'lost - territory not available',
-  'future interest',
-  'unknown',
 ];
 
 /**
