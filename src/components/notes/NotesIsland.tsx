@@ -299,8 +299,8 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
 
       {/* Add Note Form */}
       {canAddNotes && showForm && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">New Note</h3>
+        <div className="rounded-xl border p-6" style={{ backgroundColor: 'var(--card-background, #FFFFFF)', borderColor: 'var(--card-border, #E5E7EB)' }}>
+          <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--foreground, #111827)' }}>New Note</h3>
           <form onSubmit={handleSubmitNote}>
             <RichTextEditor
               value={noteContent}
@@ -332,7 +332,7 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
       )}
 
       {/* Search */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <div className="rounded-xl border p-4" style={{ backgroundColor: 'var(--card-background, #FFFFFF)', borderColor: 'var(--card-border, #E5E7EB)' }}>
         <label htmlFor="notes-search" className="sr-only">Search notes</label>
         <input
           type="text"
@@ -340,7 +340,12 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by content or author..."
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+          className="w-full px-4 py-2 border rounded-lg focus:ring-2 outline-none transition-colors"
+          style={{
+            backgroundColor: 'var(--background, #F9FAFB)',
+            borderColor: 'var(--border, #E5E7EB)',
+            color: 'var(--foreground, #111827)',
+          } as React.CSSProperties}
         />
       </div>
 
@@ -348,31 +353,31 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
       {loading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 p-6">
+            <div key={i} className="rounded-xl border p-6" style={{ backgroundColor: 'var(--card-background, #FFFFFF)', borderColor: 'var(--card-border, #E5E7EB)' }}>
               <div className="flex items-center gap-3 mb-2">
-                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-                <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+                <div className="h-4 w-24 rounded animate-pulse" style={{ backgroundColor: 'var(--border, #E5E7EB)' }} />
+                <div className="h-4 w-32 rounded animate-pulse" style={{ backgroundColor: 'var(--border, #E5E7EB)' }} />
               </div>
-              <div className="h-4 w-full bg-gray-100 rounded animate-pulse mt-2" />
-              <div className="h-4 w-3/4 bg-gray-100 rounded animate-pulse mt-1" />
+              <div className="h-4 w-full rounded animate-pulse mt-2" style={{ backgroundColor: 'var(--border-muted, #F3F4F6)' }} />
+              <div className="h-4 w-3/4 rounded animate-pulse mt-1" style={{ backgroundColor: 'var(--border-muted, #F3F4F6)' }} />
             </div>
           ))}
         </div>
       ) : notes.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500">
+        <div className="rounded-xl border p-8 text-center" style={{ backgroundColor: 'var(--card-background, #FFFFFF)', borderColor: 'var(--card-border, #E5E7EB)', color: 'var(--foreground-muted, #6B7280)' }}>
           {debouncedSearch ? 'No notes match your search' : 'No notes found in the last 7 days'}
         </div>
       ) : (
         <div className="space-y-4">
           {notes.map((note) => (
-            <div key={note.id} className="bg-white rounded-xl border border-gray-200 p-6">
+            <div key={note.id} className="rounded-xl border p-6" style={{ backgroundColor: 'var(--card-background, #FFFFFF)', borderColor: 'var(--card-border, #E5E7EB)' }}>
               {editingNoteId === note.id ? (
                 <form onSubmit={handleSaveEdit}>
                   <div className="flex items-center gap-3 mb-3 flex-wrap">
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm font-medium" style={{ color: 'var(--foreground, #111827)' }}>
                       {getDisplayAuthor(note)}
                     </span>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                       {formatDate(note.noteDate)}
                     </span>
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
@@ -408,10 +413,10 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2 flex-wrap">
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm font-medium" style={{ color: 'var(--foreground, #111827)' }}>
                         {getDisplayAuthor(note)}
                       </span>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                         {formatDate(note.noteDate)}
                       </span>
                       {note.source === 'manual' && (
@@ -423,16 +428,17 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
                     {note.content ? (
                       isHtmlContent(note.content) ? (
                         <div
-                          className="prose prose-sm max-w-none text-gray-600 prose-img:max-w-full prose-img:rounded-lg prose-a:text-blue-600 prose-a:underline"
+                          className="prose prose-sm max-w-none prose-img:max-w-full prose-img:rounded-lg prose-a:text-blue-600 prose-a:underline"
+                          style={{ color: 'var(--foreground-muted, #6B7280)' }}
                           dangerouslySetInnerHTML={{ __html: note.content }}
                         />
                       ) : (
-                        <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                        <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                           {note.content}
                         </p>
                       )
                     ) : (
-                      <p className="text-sm text-gray-600">No content</p>
+                      <p className="text-sm" style={{ color: 'var(--foreground-muted, #6B7280)' }}>No content</p>
                     )}
                   </div>
                   {canAddNotes && note.source === 'manual' && (
@@ -474,7 +480,12 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
             type="button"
             onClick={handleLoadMore}
             disabled={loadingMore}
-            className="px-6 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="px-6 py-2 border rounded-lg transition-colors disabled:opacity-50"
+            style={{
+              backgroundColor: 'var(--card-background, #FFFFFF)',
+              borderColor: 'var(--border, #E5E7EB)',
+              color: 'var(--foreground, #111827)',
+            }}
           >
             {loadingMore ? 'Loading...' : 'Show More'}
           </button>

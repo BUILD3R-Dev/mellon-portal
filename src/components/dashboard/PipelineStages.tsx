@@ -59,8 +59,14 @@ export function PipelineStages({ data, className }: PipelineStagesProps) {
   const totalCount = data.reduce((sum, d) => sum + d.count, 0);
 
   return (
-    <div className={cn('bg-white rounded-xl border border-gray-200 p-6', className)}>
-      <h2 className="text-lg font-semibold text-gray-900 mb-6">Pipeline Stages</h2>
+    <div
+      className={cn('rounded-xl border p-6', className)}
+      style={{
+        backgroundColor: 'var(--card-background, #FFFFFF)',
+        borderColor: 'var(--card-border, #E5E7EB)',
+      }}
+    >
+      <h2 className="text-lg font-semibold mb-6" style={{ color: 'var(--foreground, #111827)' }}>Pipeline Stages</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
         {data.map((stage, i) => {
           const barWidth = Math.max((stage.count / maxCount) * 100, 4);
@@ -70,7 +76,8 @@ export function PipelineStages({ data, className }: PipelineStagesProps) {
           return (
             <div
               key={stage.stage}
-              className="group relative border border-gray-200 rounded-lg p-3 hover:shadow-md hover:border-gray-300 transition-all"
+              className="group relative border rounded-lg p-3 hover:shadow-md transition-all"
+              style={{ borderColor: 'var(--border, #E5E7EB)' }}
             >
               {/* Color accent bar */}
               <div
@@ -80,27 +87,28 @@ export function PipelineStages({ data, className }: PipelineStagesProps) {
 
               {/* Stage name */}
               <div
-                className="text-xs font-medium text-gray-500 mt-1 truncate"
+                className="text-xs font-medium mt-1 truncate"
                 title={stage.stage}
+                style={{ color: 'var(--foreground-muted, #6B7280)' }}
               >
                 {stage.stage}
               </div>
 
               {/* Count + percentage */}
               <div className="flex items-baseline gap-1.5 mt-1">
-                <span className="text-2xl font-bold text-gray-900">{stage.count}</span>
-                <span className="text-xs text-gray-400">{pct}%</span>
+                <span className="text-2xl font-bold" style={{ color: 'var(--foreground, #111827)' }}>{stage.count}</span>
+                <span className="text-xs" style={{ color: 'var(--foreground-muted, #9CA3AF)' }}>{pct}%</span>
               </div>
 
               {/* Dollar value */}
               {stage.dollarValue > 0 && (
-                <div className="text-xs text-gray-500 mt-0.5">
+                <div className="text-xs mt-0.5" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                   {formatCurrency(stage.dollarValue)}
                 </div>
               )}
 
               {/* Proportion bar */}
-              <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="mt-2 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border-muted, #F3F4F6)' }}>
                 <div
                   className="h-full rounded-full"
                   style={{ width: `${barWidth}%`, backgroundColor: color }}

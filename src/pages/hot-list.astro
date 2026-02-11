@@ -102,48 +102,48 @@ function getStageBadgeClass(stage: string | null): string {
   <div class="space-y-8">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-semibold text-gray-900">Pipeline Hot List</h1>
-        <p class="mt-1 text-gray-600">Candidates in later-funnel stages with deal momentum.</p>
+        <h1 class="text-2xl font-semibold" style="color: var(--foreground, #111827);">Pipeline Hot List</h1>
+        <p class="mt-1" style="color: var(--foreground-muted, #6B7280);">Candidates in later-funnel stages with deal momentum.</p>
       </div>
     </div>
 
     <!-- Hot List Table -->
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="rounded-xl border overflow-hidden" style="background-color: var(--card-background, #FFFFFF); border-color: var(--card-border, #E5E7EB);">
       {items.length > 0 ? (
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+          <table class="min-w-full divide-y" style="--tw-divide-opacity: 1; border-color: var(--border, #E5E7EB);">
+            <thead style="background-color: var(--background, #F9FAFB);">
               <tr>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--foreground-muted, #6B7280);">
                   Candidate Name
                 </th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--foreground-muted, #6B7280);">
                   Brand / Market
                 </th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--foreground-muted, #6B7280);">
                   Stage
                 </th>
-                <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--foreground-muted, #6B7280);">
                   IFF
                 </th>
-                <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--foreground-muted, #6B7280);">
                   Weighted IFF
                 </th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--foreground-muted, #6B7280);">
                   Sales Lead
                 </th>
-                <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--foreground-muted, #6B7280);">
                   % Likely
                 </th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
+            <tbody class="divide-y" style="background-color: var(--card-background, #FFFFFF); border-color: var(--border, #E5E7EB);">
               {items.map((item) => (
-                <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                <tr class="hot-list-row">
+                  <td class="px-4 py-3 whitespace-nowrap text-sm font-medium" style="color: var(--foreground, #111827);">
                     {item.candidateName}
                   </td>
-                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                  <td class="px-4 py-3 whitespace-nowrap text-sm" style="color: var(--foreground-muted, #6B7280);">
                     {item.market || '-'}
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap">
@@ -151,32 +151,32 @@ function getStageBadgeClass(stage: string | null): string {
                       {item.stage || 'Unknown'}
                     </span>
                   </td>
-                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-right" style="color: var(--foreground, #111827);">
                     {formatCurrency(item.iff)}
                   </td>
-                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-right font-medium" style="color: var(--foreground, #111827);">
                     {formatCurrency(item.weightedIff)}
                   </td>
-                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                  <td class="px-4 py-3 whitespace-nowrap text-sm" style="color: var(--foreground-muted, #6B7280);">
                     {item.salesLead || '-'}
                   </td>
-                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-right" style="color: var(--foreground, #111827);">
                     {item.likelyPct ?? 0}%
                   </td>
                 </tr>
               ))}
             </tbody>
-            <tfoot class="bg-gray-50 border-t-2 border-gray-300">
+            <tfoot class="border-t-2" style="background-color: var(--background, #F9FAFB); border-color: var(--border, #E5E7EB);">
               <tr>
-                <td class="px-4 py-3 text-sm font-bold text-gray-900">
+                <td class="px-4 py-3 text-sm font-bold" style="color: var(--foreground, #111827);">
                   Total ({items.length})
                 </td>
                 <td class="px-4 py-3"></td>
                 <td class="px-4 py-3"></td>
-                <td class="px-4 py-3 text-sm font-bold text-gray-900 text-right">
+                <td class="px-4 py-3 text-sm font-bold text-right" style="color: var(--foreground, #111827);">
                   {formatCurrency(totalIff)}
                 </td>
-                <td class="px-4 py-3 text-sm font-bold text-gray-900 text-right">
+                <td class="px-4 py-3 text-sm font-bold text-right" style="color: var(--foreground, #111827);">
                   {formatCurrency(totalWeightedIff)}
                 </td>
                 <td class="px-4 py-3"></td>
@@ -186,7 +186,7 @@ function getStageBadgeClass(stage: string | null): string {
           </table>
         </div>
       ) : (
-        <div class="p-8 text-center text-gray-500">
+        <div class="p-8 text-center" style="color: var(--foreground-muted, #6B7280);">
           No hot list items available. Candidates appear here when they reach the Deal Structure stage or beyond.
         </div>
       )}
@@ -196,3 +196,9 @@ function getStageBadgeClass(stage: string | null): string {
     <SyncStatusBanner client:load />
   </div>
 </DashboardLayout>
+
+<style>
+  .hot-list-row:hover {
+    background-color: var(--border-muted, #F3F4F6);
+  }
+</style>

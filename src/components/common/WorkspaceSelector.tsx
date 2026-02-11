@@ -94,12 +94,18 @@ export function WorkspaceSelector({
       <button
         type="button"
         onClick={handleOpenDropdown}
-        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all"
+        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium border rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all"
+        style={{
+          color: 'var(--foreground, #111827)',
+          backgroundColor: 'var(--card-background, #FFFFFF)',
+          borderColor: 'var(--border, #E5E7EB)',
+        } as React.CSSProperties}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
         <svg
-          className="w-4 h-4 text-gray-500"
+          className="w-4 h-4"
+          style={{ color: 'var(--foreground-muted, #6B7280)' }}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -113,7 +119,8 @@ export function WorkspaceSelector({
         </svg>
         <span className="max-w-[150px] truncate">{displayText}</span>
         <svg
-          className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          style={{ color: 'var(--foreground-muted, #9CA3AF)' }}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -125,7 +132,11 @@ export function WorkspaceSelector({
       {/* Dropdown */}
       {isOpen && (
         <div
-          className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
+          className="absolute right-0 mt-2 w-64 rounded-lg shadow-lg border py-1 z-50"
+          style={{
+            backgroundColor: 'var(--card-background, #FFFFFF)',
+            borderColor: 'var(--border, #E5E7EB)',
+          }}
           role="listbox"
         >
           {/* Admin option for agency admins */}
@@ -134,7 +145,7 @@ export function WorkspaceSelector({
               <button
                 type="button"
                 onClick={handleGoToAdmin}
-                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 ws-dropdown-item"
                 role="option"
               >
                 <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center flex-shrink-0">
@@ -159,17 +170,17 @@ export function WorkspaceSelector({
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Admin Dashboard</p>
-                  <p className="text-xs text-gray-500">Manage all tenants</p>
+                  <p className="font-medium" style={{ color: 'var(--foreground, #111827)' }}>Admin Dashboard</p>
+                  <p className="text-xs" style={{ color: 'var(--foreground-muted, #6B7280)' }}>Manage all tenants</p>
                 </div>
               </button>
-              <div className="border-t border-gray-100 my-1" />
+              <div className="border-t my-1" style={{ borderColor: 'var(--border-muted, #F3F4F6)' }} />
             </>
           )}
 
           {/* Tenants section */}
           <div className="px-4 py-2">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+            <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
               Workspaces
             </p>
           </div>
@@ -197,7 +208,7 @@ export function WorkspaceSelector({
               </svg>
             </div>
           ) : activeTenants.length === 0 ? (
-            <div className="px-4 py-4 text-center text-sm text-gray-500">
+            <div className="px-4 py-4 text-center text-sm" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
               No workspaces available
             </div>
           ) : (
@@ -207,19 +218,18 @@ export function WorkspaceSelector({
                   key={tenant.id}
                   type="button"
                   onClick={() => handleSelectTenant(tenant.id)}
-                  className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3 ${
-                    tenant.id === currentTenantId ? 'bg-gray-50' : ''
-                  }`}
+                  className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 ws-dropdown-item"
+                  style={tenant.id === currentTenantId ? { backgroundColor: 'var(--border-muted, #F3F4F6)' } : undefined}
                   role="option"
                   aria-selected={tenant.id === currentTenantId}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-semibold text-gray-600">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--border-muted, #F3F4F6)' }}>
+                    <span className="text-xs font-semibold" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                       {tenant.name.substring(0, 2).toUpperCase()}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{tenant.name}</p>
+                    <p className="font-medium truncate" style={{ color: 'var(--foreground, #111827)' }}>{tenant.name}</p>
                   </div>
                   {tenant.id === currentTenantId && (
                     <svg

@@ -48,3 +48,8 @@
     @apply bg-background text-foreground font-sans antialiased;
   }
 }
+
+/* Themed dropdown hover for workspace selector and similar components */
+.ws-dropdown-item:hover {
+  background-color: var(--border-muted, #F3F4F6);
+}

@@ -37,6 +37,15 @@ const COLORS = [
 ];
 
 /**
+ * Reads a CSS variable from :root, with fallback
+ */
+function getCSSVar(name: string, fallback: string): string {
+  if (typeof window === 'undefined') return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
+/**
  * PieChart renders a pie/donut chart for categorical data.
  */
 export function PieChart({
@@ -45,6 +54,10 @@ export function PieChart({
   height = 300,
   className,
 }: PieChartProps) {
+  const foreground = getCSSVar('--foreground', '#111827');
+  const foregroundMuted = getCSSVar('--foreground-muted', '#6B7280');
+  const cardBg = getCSSVar('--card-background', '#FFFFFF');
+
   const option = {
     title: {
       text: title,
@@ -52,7 +65,7 @@ export function PieChart({
       textStyle: {
         fontSize: 16,
         fontWeight: 600,
-        color: '#111827',
+        color: foreground,
       },
     },
     tooltip: {
@@ -64,7 +77,7 @@ export function PieChart({
       right: '5%',
       top: 'center',
       textStyle: {
-        color: '#6B7280',
+        color: foregroundMuted,
       },
     },
     series: [
@@ -76,7 +89,7 @@ export function PieChart({
         avoidLabelOverlap: false,
         itemStyle: {
           borderRadius: 4,
-          borderColor: '#fff',
+          borderColor: cardBg,
           borderWidth: 2,
         },
         label: {
@@ -103,7 +116,13 @@ export function PieChart({
   };
 
   return (
-    <div className={cn('bg-white rounded-xl border border-gray-200 p-6', className)}>
+    <div
+      className={cn('rounded-xl border p-6', className)}
+      style={{
+        backgroundColor: 'var(--card-background, #FFFFFF)',
+        borderColor: 'var(--card-border, #E5E7EB)',
+      }}
+    >
       <ReactECharts
         option={option}
         style={{ height: `${height}px`, width: '100%' }}
