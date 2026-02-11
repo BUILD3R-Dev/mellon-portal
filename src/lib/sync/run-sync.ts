@@ -117,7 +117,9 @@ async function normalizeLeadMetrics(db: any, tenantId: string, leads: CTLeadResp
     rows.push({ tenantId, dimensionType: 'status', dimensionValue: status, leads: count });
   }
 
-  // Pre-compute time-window KPI metrics from contact creation dates
+  // Pre-compute time-window KPI metrics from contact creation dates.
+  // Counts ALL contacts (regardless of contact_type or stage) so the
+  // "New Leads" KPI reflects every contact added in the period.
   const now = new Date();
   const dayOfWeek = now.getUTCDay();
   const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -141,7 +143,7 @@ async function normalizeLeadMetrics(db: any, tenantId: string, leads: CTLeadResp
   let newRolling7 = 0;
   let newRolling30 = 0;
   let newRolling90 = 0;
-  for (const lead of prospects) {
+  for (const lead of leads) {
     const createdDate = parseSourceDate(lead.created || lead.last_modified_date);
     if (createdDate) {
       if (createdDate >= monday) newThisWeek++;

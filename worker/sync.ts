@@ -236,8 +236,8 @@ async function normalizeLeadMetrics(
   }
 
   // Pre-compute new lead counts for time-window KPIs.
-  // Counts ALL prospects created within each window (regardless of current stage),
-  // because a lead created this week is "new" even if it already progressed in the pipeline.
+  // Counts ALL contacts created within each window (regardless of contact_type or stage),
+  // because the "New Leads" KPI should reflect every contact added in the period.
   const now = new Date();
   const dayOfWeek = now.getUTCDay();
   const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -261,7 +261,7 @@ async function normalizeLeadMetrics(
   let newRolling7 = 0;
   let newRolling30 = 0;
   let newRolling90 = 0;
-  for (const lead of prospects) {
+  for (const lead of leads) {
     const createdDate = parseSourceDate(lead.created || lead.last_modified_date);
     if (createdDate) {
       if (createdDate >= monday) newThisWeek++;
