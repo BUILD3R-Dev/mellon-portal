@@ -5,6 +5,14 @@ import { eq } from 'drizzle-orm';
 import * as fs from 'fs';
 import * as path from 'path';
 
+/** Returns the directory from which static files are served at runtime. */
+function getStaticDir(): string {
+  if (import.meta.env.PROD) {
+    return path.join(process.cwd(), 'dist', 'client');
+  }
+  return path.join(process.cwd(), 'public');
+}
+
 interface LogoResponse {
   success: true;
   data: {
@@ -246,8 +254,8 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       }
     }
 
-    // Create storage directory
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'logos', tenantId);
+    // Create storage directory (write to the directory the server actually serves)
+    const uploadDir = path.join(getStaticDir(), 'uploads', 'logos', tenantId);
     ensureDirectoryExists(uploadDir);
 
     // Delete existing logo if any
@@ -258,7 +266,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       .limit(1);
 
     if (existingBranding.length > 0 && existingBranding[0].tenantLogoUrl) {
-      const oldFilePath = path.join(process.cwd(), 'public', existingBranding[0].tenantLogoUrl);
+      const oldFilePath = path.join(getStaticDir(), existingBranding[0].tenantLogoUrl);
       if (fs.existsSync(oldFilePath)) {
         fs.unlinkSync(oldFilePath);
       }
@@ -384,7 +392,7 @@ export const DELETE: APIRoute = async ({ cookies, params }) => {
 
     // Delete file from storage if exists
     if (existingBranding.length > 0 && existingBranding[0].tenantLogoUrl) {
-      const filePath = path.join(process.cwd(), 'public', existingBranding[0].tenantLogoUrl);
+      const filePath = path.join(getStaticDir(), existingBranding[0].tenantLogoUrl);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }

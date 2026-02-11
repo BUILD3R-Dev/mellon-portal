@@ -2,7 +2,8 @@
  * POST /api/uploads/notes
  *
  * Uploads an image for use in notes.
- * Stores files in public/uploads/notes/{tenantId}/
+ * In dev: stores in public/uploads/notes/{tenantId}/ (served by Vite)
+ * In prod: stores in dist/client/uploads/notes/{tenantId}/ (served by Astro standalone)
  * Returns the public URL for the uploaded image.
  */
 import type { APIRoute } from 'astro';
@@ -10,6 +11,14 @@ import { validateSession, SESSION_COOKIE_NAME, getUserMemberships, TENANT_COOKIE
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+
+/** Returns the directory from which static files are served at runtime. */
+function getStaticDir(): string {
+  if (import.meta.env.PROD) {
+    return path.join(process.cwd(), 'dist', 'client');
+  }
+  return path.join(process.cwd(), 'public');
+}
 
 const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -90,8 +99,8 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Create storage directory
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'notes', tenantId);
+    // Create storage directory (write to the directory the server actually serves)
+    const uploadDir = path.join(getStaticDir(), 'uploads', 'notes', tenantId);
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
