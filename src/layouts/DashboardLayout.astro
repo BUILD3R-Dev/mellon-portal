@@ -186,7 +186,7 @@ if (portalBrandingData) {
 }
 
 // Determine favicon
-const faviconUrl = (!tenantId && portalBrandingData?.faviconUrl) || '/favicon.svg';
+const faviconUrl = portalBrandingData?.faviconUrl || '/favicon.svg';
 
 const inTenantContext = !!tenantId;
 ---
