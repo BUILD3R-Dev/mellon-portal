@@ -167,9 +167,9 @@ describe('Gap Analysis: DashboardIsland', () => {
     // Verify localStorage was updated
     expect(localStorageMock.setItem).toHaveBeenCalledWith('dashboard-period', 'quarter');
 
-    // Subtitle should change to "Past 13 weeks"
+    // Subtitle should change to "Past 90 days"
     await waitFor(() => {
-      expect(screen.getByText('Past 13 weeks')).toBeInTheDocument();
+      expect(screen.getByText('Past 90 days')).toBeInTheDocument();
     });
 
     // Change to Past Month
@@ -178,9 +178,9 @@ describe('Gap Analysis: DashboardIsland', () => {
     // Verify localStorage updated again
     expect(localStorageMock.setItem).toHaveBeenCalledWith('dashboard-period', 'month');
 
-    // Subtitle should change to "Past 4 weeks"
+    // Subtitle should change to "Past 30 days"
     await waitFor(() => {
-      expect(screen.getByText('Past 4 weeks')).toBeInTheDocument();
+      expect(screen.getByText('Past 30 days')).toBeInTheDocument();
     });
   });
 });

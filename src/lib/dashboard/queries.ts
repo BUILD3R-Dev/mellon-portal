@@ -7,7 +7,7 @@
  */
 
 import { db, pipelineStageCounts, leadMetrics, reportWeeks } from '@/lib/db';
-import { eq, and, isNull, isNotNull, desc, sql, inArray } from 'drizzle-orm';
+import { eq, and, isNull, isNotNull, desc, sql } from 'drizzle-orm';
 
 /**
  * Active pipeline stages in ClientTether pipeline order.
@@ -95,13 +95,13 @@ export interface LeadTrendPoint {
  *
  * @param tenantId - The tenant ID
  * @param reportWeekId - Optional report week ID for snapshot data
- * @param timeWindow - Time window for new leads: 'report-week' (default) or 'rolling-7'
+ * @param newLeadsDimension - Dimension type for new leads count (default 'new_rolling_7')
  * @returns KPI data object
  */
 export async function getKPIData(
   tenantId: string,
   reportWeekId?: string,
-  timeWindow: 'report-week' | 'rolling-7' = 'report-week'
+  newLeadsDimension: 'report-week' | 'new_rolling_7' | 'new_rolling_30' | 'new_rolling_90' = 'new_rolling_7'
 ): Promise<KPIData> {
   if (reportWeekId) {
     // Snapshot mode: query data linked to the report week
@@ -137,7 +137,7 @@ export async function getKPIData(
   // Live mode: read the pre-computed new leads count from the sync worker.
   // The sync worker counts individual leads by their CT creation date,
   // regardless of current pipeline stage.
-  const newLeadsDimensionType = timeWindow === 'rolling-7' ? 'new_rolling_7' : 'new_this_week';
+  const newLeadsDimensionType = newLeadsDimension === 'report-week' ? 'new_this_week' : newLeadsDimension;
   const newLeadsResult = await db
     .select({
       totalLeads: sql<number>`coalesce(sum(${leadMetrics.leads}), 0)`,
@@ -242,50 +242,6 @@ export async function getPipelineByStage(
       stage: row.stage,
       count: row.count ?? 0,
     }));
-}
-
-/**
- * Gets the total new leads across the last N report week snapshots.
- *
- * Queries leadMetrics rows with dimensionType='new_this_week' and
- * dimensionValue='all', joined with reportWeeks, ordered by most recent,
- * limited to the last `weeks` snapshots, and sums the leads column.
- *
- * @param tenantId - The tenant ID
- * @param weeks - Number of historical weeks to sum (e.g. 4 for month, 13 for quarter)
- * @returns Total new leads across the period
- */
-export async function getNewLeadsForPeriod(
-  tenantId: string,
-  weeks: number
-): Promise<number> {
-  // First get the most recent N report week IDs for this tenant
-  const recentWeeks = await db
-    .select({ id: reportWeeks.id })
-    .from(reportWeeks)
-    .where(eq(reportWeeks.tenantId, tenantId))
-    .orderBy(desc(reportWeeks.weekEndingDate))
-    .limit(weeks);
-
-  if (recentWeeks.length === 0) return 0;
-
-  const weekIds = recentWeeks.map((w) => w.id);
-
-  const result = await db
-    .select({
-      totalLeads: sql<number>`coalesce(sum(${leadMetrics.leads}), 0)`,
-    })
-    .from(leadMetrics)
-    .where(
-      and(
-        eq(leadMetrics.tenantId, tenantId),
-        eq(leadMetrics.dimensionType, 'new_this_week'),
-        eq(leadMetrics.dimensionValue, 'all'),
-        inArray(leadMetrics.reportWeekId, weekIds)
-      )
-    );
-
-  return Number(result[0]?.totalLeads ?? 0);
 }
 
 /**

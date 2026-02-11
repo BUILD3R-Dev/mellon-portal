@@ -249,13 +249,25 @@ async function normalizeLeadMetrics(
   rolling7Start.setUTCDate(now.getUTCDate() - 7);
   rolling7Start.setUTCHours(0, 0, 0, 0);
 
+  const rolling30Start = new Date(now);
+  rolling30Start.setUTCDate(now.getUTCDate() - 30);
+  rolling30Start.setUTCHours(0, 0, 0, 0);
+
+  const rolling90Start = new Date(now);
+  rolling90Start.setUTCDate(now.getUTCDate() - 90);
+  rolling90Start.setUTCHours(0, 0, 0, 0);
+
   let newThisWeek = 0;
   let newRolling7 = 0;
+  let newRolling30 = 0;
+  let newRolling90 = 0;
   for (const lead of prospects) {
     const createdDate = parseSourceDate(lead.created || lead.last_modified_date);
     if (createdDate) {
       if (createdDate >= monday) newThisWeek++;
       if (createdDate >= rolling7Start) newRolling7++;
+      if (createdDate >= rolling30Start) newRolling30++;
+      if (createdDate >= rolling90Start) newRolling90++;
     }
   }
 
@@ -273,6 +285,24 @@ async function normalizeLeadMetrics(
     dimensionType: 'new_rolling_7',
     dimensionValue: 'all',
     leads: newRolling7,
+    sourceCreatedAt: now,
+  });
+  recordsUpdated++;
+
+  await db.insert(schema.leadMetrics).values({
+    tenantId,
+    dimensionType: 'new_rolling_30',
+    dimensionValue: 'all',
+    leads: newRolling30,
+    sourceCreatedAt: now,
+  });
+  recordsUpdated++;
+
+  await db.insert(schema.leadMetrics).values({
+    tenantId,
+    dimensionType: 'new_rolling_90',
+    dimensionValue: 'all',
+    leads: newRolling90,
     sourceCreatedAt: now,
   });
   recordsUpdated++;

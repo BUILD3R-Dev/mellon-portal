@@ -8,7 +8,6 @@
 
 export {
   getKPIData,
-  getNewLeadsForPeriod,
   getPipelineByStage,
   getLeadTrends,
   ACTIVE_PIPELINE_STAGES,

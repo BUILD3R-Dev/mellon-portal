@@ -32,8 +32,8 @@ const PERIOD_OPTIONS: { label: string; value: Period }[] = [
 
 const PERIOD_SUBTITLES: Record<Period, string> = {
   week: 'Past 7 days',
-  month: 'Past 4 weeks',
-  quarter: 'Past 13 weeks',
+  month: 'Past 30 days',
+  quarter: 'Past 90 days',
 };
 
 const PERIOD_CHART_WEEKS: Record<Period, number> = {

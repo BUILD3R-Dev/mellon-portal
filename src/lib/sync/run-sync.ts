@@ -77,9 +77,23 @@ async function fetchWithRetry<T>(
 }
 
 /**
- * Normalizes lead data into leadMetrics rows grouped by source and status.
+ * Parses a date string from ClientTether into a Date object.
+ */
+function parseSourceDate(dateStr?: string): Date | null {
+  if (!dateStr) return null;
+  const parsed = new Date(dateStr);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+const PROSPECT_CONTACT_TYPE = '1';
+
+/**
+ * Normalizes lead data into leadMetrics rows grouped by source, status, and time-window KPIs.
  */
 async function normalizeLeadMetrics(db: any, tenantId: string, leads: CTLeadResponse[]): Promise<number> {
+  // Only include Prospects (contact_type "1") to match CT's pipeline view
+  const prospects = leads.filter((l) => l.contact_type === PROSPECT_CONTACT_TYPE);
+
   // Clear existing live metrics (non-report-week)
   await db
     .delete(schema.leadMetrics)
@@ -88,7 +102,7 @@ async function normalizeLeadMetrics(db: any, tenantId: string, leads: CTLeadResp
   const bySource = new Map<string, number>();
   const byStatus = new Map<string, number>();
 
-  for (const lead of leads) {
+  for (const lead of prospects) {
     const source = lead.clients_lead_source || lead.source || 'Unknown';
     const status = lead.clients_sales_cycle || lead.status || 'Unknown';
     bySource.set(source, (bySource.get(source) || 0) + 1);
@@ -102,6 +116,45 @@ async function normalizeLeadMetrics(db: any, tenantId: string, leads: CTLeadResp
   for (const [status, count] of byStatus) {
     rows.push({ tenantId, dimensionType: 'status', dimensionValue: status, leads: count });
   }
+
+  // Pre-compute time-window KPI metrics from contact creation dates
+  const now = new Date();
+  const dayOfWeek = now.getUTCDay();
+  const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const monday = new Date(now);
+  monday.setUTCDate(now.getUTCDate() - mondayOffset);
+  monday.setUTCHours(0, 0, 0, 0);
+
+  const rolling7Start = new Date(now);
+  rolling7Start.setUTCDate(now.getUTCDate() - 7);
+  rolling7Start.setUTCHours(0, 0, 0, 0);
+
+  const rolling30Start = new Date(now);
+  rolling30Start.setUTCDate(now.getUTCDate() - 30);
+  rolling30Start.setUTCHours(0, 0, 0, 0);
+
+  const rolling90Start = new Date(now);
+  rolling90Start.setUTCDate(now.getUTCDate() - 90);
+  rolling90Start.setUTCHours(0, 0, 0, 0);
+
+  let newThisWeek = 0;
+  let newRolling7 = 0;
+  let newRolling30 = 0;
+  let newRolling90 = 0;
+  for (const lead of prospects) {
+    const createdDate = parseSourceDate(lead.created || lead.last_modified_date);
+    if (createdDate) {
+      if (createdDate >= monday) newThisWeek++;
+      if (createdDate >= rolling7Start) newRolling7++;
+      if (createdDate >= rolling30Start) newRolling30++;
+      if (createdDate >= rolling90Start) newRolling90++;
+    }
+  }
+
+  rows.push({ tenantId, dimensionType: 'new_this_week', dimensionValue: 'all', leads: newThisWeek });
+  rows.push({ tenantId, dimensionType: 'new_rolling_7', dimensionValue: 'all', leads: newRolling7 });
+  rows.push({ tenantId, dimensionType: 'new_rolling_30', dimensionValue: 'all', leads: newRolling30 });
+  rows.push({ tenantId, dimensionType: 'new_rolling_90', dimensionValue: 'all', leads: newRolling90 });
 
   if (rows.length > 0) {
     await db.insert(schema.leadMetrics).values(rows);

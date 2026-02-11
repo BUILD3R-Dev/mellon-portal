@@ -7,7 +7,7 @@
  */
 import type { APIRoute } from 'astro';
 import { validateSession, SESSION_COOKIE_NAME, getUserMemberships, TENANT_COOKIE_NAME } from '@/lib/auth';
-import { getKPIData, getNewLeadsForPeriod } from '@/lib/dashboard';
+import { getKPIData } from '@/lib/dashboard';
 import type { KPIData } from '@/lib/dashboard';
 
 interface KPIResponse {
@@ -87,22 +87,17 @@ export const GET: APIRoute = async ({ cookies, url }) => {
       });
     }
 
-    // Parse period query parameter
+    // Parse period query parameter and map to the live metric dimension type
     const periodParam = url.searchParams.get('period') || 'week';
-    const period = (['week', 'month', 'quarter'] as const).includes(periodParam as any)
-      ? (periodParam as 'week' | 'month' | 'quarter')
-      : 'week';
+    const PERIOD_TO_DIMENSION: Record<string, string> = {
+      week: 'new_rolling_7',
+      month: 'new_rolling_30',
+      quarter: 'new_rolling_90',
+    };
+    const timeWindow = PERIOD_TO_DIMENSION[periodParam] ? periodParam : 'week';
+    const dimensionType = PERIOD_TO_DIMENSION[timeWindow] as 'new_rolling_7' | 'new_rolling_30' | 'new_rolling_90';
 
-    // For week, use live rolling-7-day data; for month/quarter, sum historical snapshots
-    let data: KPIData;
-    if (period === 'week') {
-      data = await getKPIData(tenantId, undefined, 'rolling-7');
-    } else {
-      const weeks = period === 'month' ? 4 : 13;
-      const liveData = await getKPIData(tenantId, undefined, 'rolling-7');
-      const periodNewLeads = await getNewLeadsForPeriod(tenantId, weeks);
-      data = { ...liveData, newLeads: periodNewLeads };
-    }
+    const data = await getKPIData(tenantId, undefined, dimensionType);
 
     const response: KPIResponse = {
       success: true,
