@@ -55,6 +55,9 @@ if (tenantId) {
   }
 }
 
+// Filter out candidates with $0 IFF (no deal value)
+items = items.filter((item) => parseFloat(item.iff || '0') > 0);
+
 // Sort by stage priority (later stages first), then by IFF descending
 const stageOrder = new Map(HOT_LIST_STAGES.map((s, i) => [s.toLowerCase(), i]));
 items.sort((a, b) => {
