@@ -38,6 +38,8 @@ export const tenantBranding = pgTable('tenant_branding', {
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   mellonLogoUrl: text('mellon_logo_url'),
   tenantLogoUrl: text('tenant_logo_url'),
+  tenantLogoData: text('tenant_logo_data'),
+  tenantLogoContentType: varchar('tenant_logo_content_type', { length: 50 }),
   primaryColor: varchar('primary_color', { length: 7 }).default('#1E40AF'),
   accentColor: varchar('accent_color', { length: 7 }).default('#3B82F6'),
   headerLayout: varchar('header_layout', { length: 50 }).default('default'),
@@ -188,6 +190,19 @@ export const hotListItems = pgTable('hot_list_items', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+// Note Images (stored as base64 in database to survive container rebuilds)
+export const noteImages = pgTable('note_images', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  filename: varchar('filename', { length: 255 }).notNull(),
+  data: text('data').notNull(),
+  contentType: varchar('content_type', { length: 50 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => [
+  index('note_images_tenant_id_idx').on(table.tenantId),
+  uniqueIndex('note_images_tenant_filename_idx').on(table.tenantId, table.filename),
+]);
+
 // ClientTether Notes Table
 export const ctNotes = pgTable('ct_notes', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -286,6 +301,16 @@ export const portalBranding = pgTable('portal_branding', {
   footerLogoLightUrl: text('footer_logo_light_url'),
   footerLogoDarkUrl: text('footer_logo_dark_url'),
   faviconUrl: text('favicon_url'),
+  headerLogoLightData: text('header_logo_light_data'),
+  headerLogoLightContentType: varchar('header_logo_light_content_type', { length: 50 }),
+  headerLogoDarkData: text('header_logo_dark_data'),
+  headerLogoDarkContentType: varchar('header_logo_dark_content_type', { length: 50 }),
+  footerLogoLightData: text('footer_logo_light_data'),
+  footerLogoLightContentType: varchar('footer_logo_light_content_type', { length: 50 }),
+  footerLogoDarkData: text('footer_logo_dark_data'),
+  footerLogoDarkContentType: varchar('footer_logo_dark_content_type', { length: 50 }),
+  faviconData: text('favicon_data'),
+  faviconContentType: varchar('favicon_content_type', { length: 50 }),
   adminThemeId: varchar('admin_theme_id', { length: 50 }).notNull().default('light'),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

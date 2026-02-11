@@ -2,14 +2,12 @@
  * POST /api/uploads/notes — Upload an image for use in notes
  * GET  /api/uploads/notes?file={tenantId}/{filename} — Serve an uploaded image
  *
- * Files are stored in a persistent data directory (data/uploads/notes/{tenantId}/)
- * that survives Docker rebuilds. The returned URL points to the GET handler
- * so images are served through the API rather than as static files.
+ * Image data is stored as base64 in the database to survive container rebuilds.
  */
 import type { APIRoute } from 'astro';
 import { validateSession, SESSION_COOKIE_NAME, getUserMemberships, TENANT_COOKIE_NAME } from '@/lib/auth';
-import * as fs from 'fs';
-import * as path from 'path';
+import { db, noteImages } from '@/lib/db';
+import { eq, and } from 'drizzle-orm';
 import * as crypto from 'crypto';
 
 const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
@@ -22,19 +20,6 @@ const MIME_TO_EXT: Record<string, string> = {
   'image/webp': '.webp',
 };
 
-const EXT_TO_MIME: Record<string, string> = {
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
-};
-
-/** Persistent upload directory that survives Docker rebuilds */
-function getUploadBaseDir(): string {
-  return path.join(process.cwd(), 'data', 'uploads', 'notes');
-}
-
 export const GET: APIRoute = async ({ url }) => {
   try {
     const fileParam = url.searchParams.get('file');
@@ -42,25 +27,38 @@ export const GET: APIRoute = async ({ url }) => {
       return new Response('Not found', { status: 404 });
     }
 
-    // Sanitize: only allow {uuid}/{filename} patterns, no path traversal
-    const normalized = path.normalize(fileParam);
-    if (normalized.includes('..') || path.isAbsolute(normalized)) {
+    // Parse {tenantId}/{filename} pattern
+    const parts = fileParam.split('/');
+    if (parts.length !== 2 || !parts[0] || !parts[1]) {
       return new Response('Not found', { status: 404 });
     }
 
-    const filePath = path.join(getUploadBaseDir(), normalized);
-    if (!fs.existsSync(filePath)) {
+    const [tenantId, filename] = parts;
+
+    // Block path traversal
+    if (filename.includes('..') || tenantId.includes('..')) {
       return new Response('Not found', { status: 404 });
     }
 
-    const ext = path.extname(filePath).toLowerCase();
-    const contentType = EXT_TO_MIME[ext] || 'application/octet-stream';
-    const fileBuffer = fs.readFileSync(filePath);
+    const rows = await db
+      .select({
+        data: noteImages.data,
+        contentType: noteImages.contentType,
+      })
+      .from(noteImages)
+      .where(and(eq(noteImages.tenantId, tenantId), eq(noteImages.filename, filename)))
+      .limit(1);
 
-    return new Response(fileBuffer, {
+    if (rows.length === 0) {
+      return new Response('Not found', { status: 404 });
+    }
+
+    const buffer = Buffer.from(rows[0].data, 'base64');
+
+    return new Response(buffer, {
       status: 200,
       headers: {
-        'Content-Type': contentType,
+        'Content-Type': rows[0].contentType,
         'Cache-Control': 'public, max-age=31536000, immutable',
       },
     });
@@ -138,20 +136,20 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     // Read file data
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-
-    // Store in persistent data directory
-    const uploadDir = path.join(getUploadBaseDir(), tenantId);
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
+    const base64Data = buffer.toString('base64');
 
     // Generate unique filename
     const ext = MIME_TO_EXT[file.type] || '.bin';
     const uniqueId = crypto.randomBytes(8).toString('hex');
     const filename = `${Date.now()}-${uniqueId}${ext}`;
-    const filePath = path.join(uploadDir, filename);
 
-    fs.writeFileSync(filePath, buffer);
+    // Store in database
+    await db.insert(noteImages).values({
+      tenantId,
+      filename,
+      data: base64Data,
+      contentType: file.type,
+    });
 
     // Return URL that points to the GET handler
     const imageUrl = `/api/uploads/notes?file=${encodeURIComponent(`${tenantId}/${filename}`)}`;

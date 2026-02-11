@@ -1,36 +1,20 @@
 /**
- * GET /api/admin/branding/{type} — Serve uploaded portal branding files
+ * GET /api/admin/branding/{type} — Serve uploaded portal branding files from database
  *
  * type: header-light | header-dark | footer-light | footer-dark | favicon
  */
 import type { APIRoute } from 'astro';
-import * as fs from 'fs';
-import * as path from 'path';
+import { db, portalBranding } from '@/lib/db';
 
 const VALID_TYPES = ['header-light', 'header-dark', 'footer-light', 'footer-dark', 'favicon'];
 
-const EXT_TO_MIME: Record<string, string> = {
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon',
+const TYPE_TO_COLUMNS: Record<string, { data: string; contentType: string }> = {
+  'header-light': { data: 'headerLogoLightData', contentType: 'headerLogoLightContentType' },
+  'header-dark': { data: 'headerLogoDarkData', contentType: 'headerLogoDarkContentType' },
+  'footer-light': { data: 'footerLogoLightData', contentType: 'footerLogoLightContentType' },
+  'footer-dark': { data: 'footerLogoDarkData', contentType: 'footerLogoDarkContentType' },
+  'favicon': { data: 'faviconData', contentType: 'faviconContentType' },
 };
-
-function getUploadDir(type: string): string {
-  return path.join(process.cwd(), 'data', 'uploads', 'portal-branding', type);
-}
-
-function findFile(type: string): { filePath: string; ext: string } | null {
-  const dir = getUploadDir(type);
-  for (const ext of ['.png', '.jpg', '.svg', '.ico']) {
-    const filePath = path.join(dir, `logo${ext}`);
-    if (fs.existsSync(filePath)) {
-      return { filePath, ext };
-    }
-  }
-  return null;
-}
 
 export const GET: APIRoute = async ({ params }) => {
   try {
@@ -39,15 +23,23 @@ export const GET: APIRoute = async ({ params }) => {
       return new Response('Not found', { status: 404 });
     }
 
-    const file = findFile(type);
-    if (!file) {
+    const rows = await db.select().from(portalBranding).limit(1);
+    if (rows.length === 0) {
       return new Response('Not found', { status: 404 });
     }
 
-    const contentType = EXT_TO_MIME[file.ext] || 'application/octet-stream';
-    const fileBuffer = fs.readFileSync(file.filePath);
+    const branding = rows[0] as any;
+    const columns = TYPE_TO_COLUMNS[type];
+    const base64Data = branding[columns.data];
+    const contentType = branding[columns.contentType];
 
-    return new Response(fileBuffer, {
+    if (!base64Data || !contentType) {
+      return new Response('Not found', { status: 404 });
+    }
+
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    return new Response(buffer, {
       status: 200,
       headers: {
         'Content-Type': contentType,

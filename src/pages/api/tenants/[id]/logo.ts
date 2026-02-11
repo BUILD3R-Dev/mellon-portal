@@ -1,17 +1,14 @@
 /**
- * GET    /api/tenants/[id]/logo — Serve the tenant's logo image
+ * GET    /api/tenants/[id]/logo — Serve the tenant's logo image from database
  * POST   /api/tenants/[id]/logo — Upload a logo for the tenant
  * DELETE /api/tenants/[id]/logo — Remove the tenant's logo
  *
- * Logos are stored in data/uploads/logos/{tenantId}/ (persistent across deploys).
- * The GET handler serves the file directly with immutable cache headers.
+ * Image data is stored as base64 in the database to survive container rebuilds.
  */
 import type { APIRoute } from 'astro';
 import { validateSession, SESSION_COOKIE_NAME, getUserMemberships } from '@/lib/auth';
 import { db, tenants, tenantBranding } from '@/lib/db';
 import { eq } from 'drizzle-orm';
-import * as fs from 'fs';
-import * as path from 'path';
 
 interface LogoResponse {
   success: true;
@@ -20,34 +17,10 @@ interface LogoResponse {
   };
 }
 
-interface LogoErrorResponse {
-  success: false;
-  error: string;
-  code: string;
-}
-
 const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml'];
 const MAX_FILE_SIZE = 500 * 1024; // 500KB
 const MAX_WIDTH = 400;
 const MAX_HEIGHT = 150;
-
-const MIME_TO_EXT: Record<string, string> = {
-  'image/png': '.png',
-  'image/jpeg': '.jpg',
-  'image/svg+xml': '.svg',
-};
-
-const EXT_TO_MIME: Record<string, string> = {
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.svg': 'image/svg+xml',
-};
-
-/** Persistent upload directory that survives Docker rebuilds */
-function getLogoDir(tenantId: string): string {
-  return path.join(process.cwd(), 'data', 'uploads', 'logos', tenantId);
-}
 
 /**
  * Validates agency admin authorization
@@ -89,23 +62,9 @@ async function validateAgencyAdmin(cookies: any): Promise<{ isAuthorized: boolea
 }
 
 /**
- * Finds the logo file on disk for a tenant (logo.png, logo.jpg, or logo.svg)
- */
-function findLogoFile(tenantId: string): { filePath: string; ext: string } | null {
-  const dir = getLogoDir(tenantId);
-  for (const ext of ['.png', '.jpg', '.svg']) {
-    const filePath = path.join(dir, `logo${ext}`);
-    if (fs.existsSync(filePath)) {
-      return { filePath, ext };
-    }
-  }
-  return null;
-}
-
-/**
  * GET /api/tenants/[id]/logo
  *
- * Serves the tenant's logo image from the persistent data directory.
+ * Serves the tenant's logo image from the database.
  */
 export const GET: APIRoute = async ({ params }) => {
   try {
@@ -114,18 +73,25 @@ export const GET: APIRoute = async ({ params }) => {
       return new Response('Not found', { status: 404 });
     }
 
-    const logo = findLogoFile(tenantId);
-    if (!logo) {
+    const rows = await db
+      .select({
+        tenantLogoData: tenantBranding.tenantLogoData,
+        tenantLogoContentType: tenantBranding.tenantLogoContentType,
+      })
+      .from(tenantBranding)
+      .where(eq(tenantBranding.tenantId, tenantId))
+      .limit(1);
+
+    if (rows.length === 0 || !rows[0].tenantLogoData || !rows[0].tenantLogoContentType) {
       return new Response('Not found', { status: 404 });
     }
 
-    const contentType = EXT_TO_MIME[logo.ext] || 'application/octet-stream';
-    const fileBuffer = fs.readFileSync(logo.filePath);
+    const buffer = Buffer.from(rows[0].tenantLogoData, 'base64');
 
-    return new Response(fileBuffer, {
+    return new Response(buffer, {
       status: 200,
       headers: {
-        'Content-Type': contentType,
+        'Content-Type': rows[0].tenantLogoContentType,
         'Cache-Control': 'public, max-age=86400',
       },
     });
@@ -224,25 +190,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       }
     }
 
-    // Create persistent storage directory
-    const uploadDir = getLogoDir(tenantId);
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    // Delete existing logo file if any
-    const existingLogo = findLogoFile(tenantId);
-    if (existingLogo) {
-      fs.unlinkSync(existingLogo.filePath);
-    }
-
-    // Save file
-    const extension = MIME_TO_EXT[file.type] || '';
-    const filename = `logo${extension}`;
-    const filePath = path.join(uploadDir, filename);
-    fs.writeFileSync(filePath, buffer);
-
-    // URL points to the GET handler
+    const base64Data = buffer.toString('base64');
     const logoUrl = `/api/tenants/${tenantId}/logo`;
 
     // Update database
@@ -258,6 +206,8 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
         .values({
           tenantId,
           tenantLogoUrl: logoUrl,
+          tenantLogoData: base64Data,
+          tenantLogoContentType: file.type,
           themeId: 'light',
         });
     } else {
@@ -265,6 +215,8 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
         .update(tenantBranding)
         .set({
           tenantLogoUrl: logoUrl,
+          tenantLogoData: base64Data,
+          tenantLogoContentType: file.type,
           updatedAt: new Date(),
         })
         .where(eq(tenantBranding.tenantId, tenantId));
@@ -319,12 +271,6 @@ export const DELETE: APIRoute = async ({ cookies, params }) => {
       }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Delete file from storage if exists
-    const existingLogo = findLogoFile(tenantId);
-    if (existingLogo) {
-      fs.unlinkSync(existingLogo.filePath);
-    }
-
     // Update database
     const existingBranding = await db
       .select({ id: tenantBranding.id })
@@ -337,6 +283,8 @@ export const DELETE: APIRoute = async ({ cookies, params }) => {
         .update(tenantBranding)
         .set({
           tenantLogoUrl: null,
+          tenantLogoData: null,
+          tenantLogoContentType: null,
           updatedAt: new Date(),
         })
         .where(eq(tenantBranding.tenantId, tenantId));
