@@ -120,8 +120,8 @@ describe('Tenant Management Components', () => {
         status: 'active' as const,
         timezone: 'America/New_York',
         branding: {
-          mellonLogoUrl: 'https://example.com/mellon.png',
           tenantLogoUrl: 'https://example.com/tenant.png',
+          themeId: 'dark',
         },
       };
 
@@ -134,7 +134,7 @@ describe('Tenant Management Components', () => {
       };
 
       const element = React.createElement(TenantModal, props);
-      expect(element.props.tenant?.branding?.mellonLogoUrl).toBe('https://example.com/mellon.png');
+      expect(element.props.tenant?.branding?.tenantLogoUrl).toBe('https://example.com/tenant.png');
     });
 
     it('form validation requires name', async () => {

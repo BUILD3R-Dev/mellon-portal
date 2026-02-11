@@ -152,7 +152,7 @@ const inTenantContext = !!tenantId;
     <style set:html={cssVariables}></style>
   </head>
   <body class="min-h-screen flex flex-col" style="background-color: var(--background, #F9FAFB);">
-    <header class="sticky top-0 z-50 w-full border-b backdrop-blur supports-[backdrop-filter]:bg-white/60" style="background-color: var(--background-secondary, #FFFFFF); border-color: var(--border, #E5E7EB);">
+    <header class="sticky top-0 z-50 w-full border-b header-backdrop" style="border-color: var(--border, #E5E7EB);">
       <div class="container mx-auto flex h-16 items-center justify-between px-4">
         <div class="flex items-center gap-4">
           <!-- Tenant logo, tenant name, or Mellon Portal fallback -->
@@ -249,7 +249,7 @@ const inTenantContext = !!tenantId;
                 <!-- Profile link -->
                 <a
                   href="/profile"
-                  class="block px-4 py-2 text-sm transition-colors hover:bg-gray-50"
+                  class="block px-4 py-2 text-sm transition-colors dropdown-item"
                   style="color: var(--foreground, #111827);"
                   role="menuitem"
                 >
@@ -265,7 +265,7 @@ const inTenantContext = !!tenantId;
                 {hasMultipleWorkspaces && (
                   <a
                     href="/select-workspace"
-                    class="block px-4 py-2 text-sm transition-colors hover:bg-gray-50"
+                    class="block px-4 py-2 text-sm transition-colors dropdown-item"
                     style="color: var(--foreground, #111827);"
                     role="menuitem"
                   >
@@ -284,7 +284,7 @@ const inTenantContext = !!tenantId;
                 <button
                   type="button"
                   id="logout-button"
-                  class="w-full text-left px-4 py-2 text-sm transition-colors hover:bg-gray-50"
+                  class="w-full text-left px-4 py-2 text-sm transition-colors dropdown-item"
                   style="color: var(--foreground, #111827);"
                   role="menuitem"
                 >
@@ -368,6 +368,22 @@ const inTenantContext = !!tenantId;
     </footer>
   </body>
 </html>
+
+<style>
+  .header-backdrop {
+    background-color: var(--background-secondary, #FFFFFF);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  @supports (backdrop-filter: blur(8px)) {
+    .header-backdrop {
+      background-color: color-mix(in srgb, var(--background-secondary, #FFFFFF) 60%, transparent);
+    }
+  }
+  .dropdown-item:hover {
+    background-color: var(--border-muted, #F3F4F6);
+  }
+</style>
 
 <script>
   // User dropdown toggle

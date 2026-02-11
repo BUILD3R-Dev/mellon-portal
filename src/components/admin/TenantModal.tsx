@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { LogoUpload } from './branding/LogoUpload';
 
 /**
  * Common timezone options
@@ -21,8 +22,8 @@ interface Tenant {
   clienttetherWebKey?: string | null;
   clienttetherAccessToken?: string | null;
   branding?: {
-    mellonLogoUrl?: string | null;
     tenantLogoUrl?: string | null;
+    themeId?: string | null;
   } | null;
 }
 
@@ -38,30 +39,14 @@ interface FormState {
   name: string;
   timezone: string;
   status: 'active' | 'inactive' | 'suspended';
-  mellonLogoUrl: string;
-  tenantLogoUrl: string;
+  themeId: 'light' | 'dark';
   clienttetherWebKey: string;
   clienttetherAccessToken: string;
 }
 
 interface FormErrors {
   name?: string;
-  mellonLogoUrl?: string;
-  tenantLogoUrl?: string;
   general?: string;
-}
-
-/**
- * Validates URL format
- */
-function isValidUrl(url: string): boolean {
-  if (!url.trim()) return true; // Empty is valid (optional field)
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: TenantModalProps) {
@@ -69,11 +54,11 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
     name: tenant?.name || '',
     timezone: tenant?.timezone || 'America/New_York',
     status: tenant?.status || 'active',
-    mellonLogoUrl: tenant?.branding?.mellonLogoUrl || '',
-    tenantLogoUrl: tenant?.branding?.tenantLogoUrl || '',
+    themeId: (tenant?.branding?.themeId as 'light' | 'dark') || 'light',
     clienttetherWebKey: tenant?.clienttetherWebKey || '',
     clienttetherAccessToken: tenant?.clienttetherAccessToken || '',
   });
+  const [tenantLogoUrl, setTenantLogoUrl] = React.useState<string | null>(tenant?.branding?.tenantLogoUrl || null);
   const [errors, setErrors] = React.useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -86,21 +71,21 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
         name: tenant.name,
         timezone: tenant.timezone,
         status: tenant.status,
-        mellonLogoUrl: tenant.branding?.mellonLogoUrl || '',
-        tenantLogoUrl: tenant.branding?.tenantLogoUrl || '',
+        themeId: (tenant.branding?.themeId as 'light' | 'dark') || 'light',
         clienttetherWebKey: tenant.clienttetherWebKey || '',
         clienttetherAccessToken: tenant.clienttetherAccessToken || '',
       });
+      setTenantLogoUrl(tenant.branding?.tenantLogoUrl || null);
     } else {
       setFormState({
         name: '',
         timezone: 'America/New_York',
         status: 'active',
-        mellonLogoUrl: '',
-        tenantLogoUrl: '',
+        themeId: 'light',
         clienttetherWebKey: '',
         clienttetherAccessToken: '',
       });
+      setTenantLogoUrl(null);
     }
     setErrors({});
   }, [tenant, isOpen]);
@@ -156,16 +141,6 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
       newErrors.name = 'Name must be 255 characters or less';
     }
 
-    // Validate logo URLs if provided (edit mode only)
-    if (mode === 'edit') {
-      if (formState.mellonLogoUrl && !isValidUrl(formState.mellonLogoUrl)) {
-        newErrors.mellonLogoUrl = 'Please enter a valid URL';
-      }
-      if (formState.tenantLogoUrl && !isValidUrl(formState.tenantLogoUrl)) {
-        newErrors.tenantLogoUrl = 'Please enter a valid URL';
-      }
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -190,23 +165,11 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
         status: formState.status,
       };
 
-      // Include ClientTether credentials and logo URLs for edit mode
+      // Include ClientTether credentials and theme for edit mode
       if (mode === 'edit') {
         requestBody.clienttetherWebKey = formState.clienttetherWebKey.trim() || null;
         requestBody.clienttetherAccessToken = formState.clienttetherAccessToken.trim() || null;
-
-        if (formState.mellonLogoUrl.trim()) {
-          requestBody.mellonLogoUrl = formState.mellonLogoUrl.trim();
-        } else if (tenant?.branding?.mellonLogoUrl) {
-          // Clear the logo URL if it was previously set but now empty
-          requestBody.mellonLogoUrl = null;
-        }
-        if (formState.tenantLogoUrl.trim()) {
-          requestBody.tenantLogoUrl = formState.tenantLogoUrl.trim();
-        } else if (tenant?.branding?.tenantLogoUrl) {
-          // Clear the logo URL if it was previously set but now empty
-          requestBody.tenantLogoUrl = null;
-        }
+        requestBody.themeId = formState.themeId;
       }
 
       const response = await fetch(url, {
@@ -412,70 +375,62 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
               </>
             )}
 
-            {/* Logo URL fields (only for edit mode) */}
-            {mode === 'edit' && (
+            {/* Branding section (only for edit mode) */}
+            {mode === 'edit' && tenant && (
               <>
                 <div className="border-t border-gray-200 pt-5">
                   <h3 className="text-sm font-medium text-gray-900 mb-3">Branding</h3>
                   <p className="text-xs text-gray-500 mb-4">
-                    Provide URLs to logo images. For advanced branding options, visit the Branding settings page.
+                    Upload a logo and choose a theme. For advanced branding options, visit the Branding settings page.
                   </p>
                 </div>
 
-                {/* Mellon Logo URL */}
-                <div>
-                  <label htmlFor="mellonLogoUrl" className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Mellon Logo URL
-                  </label>
-                  <input
-                    type="url"
-                    id="mellonLogoUrl"
-                    name="mellonLogoUrl"
-                    value={formState.mellonLogoUrl}
-                    onChange={handleInputChange}
-                    disabled={isSubmitting}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    placeholder="https://example.com/mellon-logo.png"
-                    aria-invalid={!!errors.mellonLogoUrl}
-                    aria-describedby={errors.mellonLogoUrl ? 'mellonLogoUrl-error' : 'mellonLogoUrl-hint'}
-                  />
-                  {errors.mellonLogoUrl ? (
-                    <p id="mellonLogoUrl-error" className="mt-1 text-sm text-red-600">
-                      {errors.mellonLogoUrl}
-                    </p>
-                  ) : (
-                    <p id="mellonLogoUrl-hint" className="mt-1 text-xs text-gray-500">
-                      URL for the Mellon branding logo displayed in the portal
-                    </p>
-                  )}
-                </div>
+                {/* Logo Upload */}
+                <LogoUpload
+                  tenantId={tenant.id}
+                  currentLogoUrl={tenantLogoUrl}
+                  onLogoChange={setTenantLogoUrl}
+                />
 
-                {/* Tenant Logo URL */}
+                {/* Light/Dark Theme Toggle */}
                 <div>
-                  <label htmlFor="tenantLogoUrl" className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Tenant Logo URL
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Theme
                   </label>
-                  <input
-                    type="url"
-                    id="tenantLogoUrl"
-                    name="tenantLogoUrl"
-                    value={formState.tenantLogoUrl}
-                    onChange={handleInputChange}
-                    disabled={isSubmitting}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    placeholder="https://example.com/tenant-logo.png"
-                    aria-invalid={!!errors.tenantLogoUrl}
-                    aria-describedby={errors.tenantLogoUrl ? 'tenantLogoUrl-error' : 'tenantLogoUrl-hint'}
-                  />
-                  {errors.tenantLogoUrl ? (
-                    <p id="tenantLogoUrl-error" className="mt-1 text-sm text-red-600">
-                      {errors.tenantLogoUrl}
-                    </p>
-                  ) : (
-                    <p id="tenantLogoUrl-hint" className="mt-1 text-xs text-gray-500">
-                      URL for the tenant/franchise brand logo displayed in the header
-                    </p>
-                  )}
+                  <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setFormState((prev) => ({ ...prev, themeId: 'light' }))}
+                      className={`px-4 py-2 text-sm font-medium transition-colors ${
+                        formState.themeId === 'light'
+                          ? 'bg-gray-900 text-white'
+                          : 'bg-white text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        Light
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormState((prev) => ({ ...prev, themeId: 'dark' }))}
+                      className={`px-4 py-2 text-sm font-medium transition-colors border-l border-gray-300 ${
+                        formState.themeId === 'dark'
+                          ? 'bg-gray-900 text-white'
+                          : 'bg-white text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                        Dark
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </>
             )}

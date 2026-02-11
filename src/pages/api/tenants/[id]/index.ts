@@ -282,7 +282,7 @@ export const PATCH: APIRoute = async ({ cookies, params, request }) => {
 
     // Parse request body
     const body = await request.json();
-    const { name, timezone, status, mellonLogoUrl, tenantLogoUrl, clienttetherWebKey, clienttetherAccessToken } = body;
+    const { name, timezone, status, mellonLogoUrl, tenantLogoUrl, themeId, clienttetherWebKey, clienttetherAccessToken } = body;
 
     // Validation for tenant fields
     const tenantUpdates: Record<string, any> = {};
@@ -343,6 +343,22 @@ export const PATCH: APIRoute = async ({ cookies, params, request }) => {
       tenantUpdates.clienttetherAccessToken = clienttetherAccessToken;
     }
 
+    // Validate themeId if provided
+    if (themeId !== undefined) {
+      const validThemes = ['light', 'dark'];
+      if (!validThemes.includes(themeId)) {
+        const response: TenantErrorResponse = {
+          success: false,
+          error: 'Invalid theme. Must be "light" or "dark".',
+          code: 'VALIDATION_ERROR',
+        };
+        return new Response(JSON.stringify(response), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Add updatedAt timestamp
     tenantUpdates.updatedAt = new Date();
 
@@ -353,8 +369,8 @@ export const PATCH: APIRoute = async ({ cookies, params, request }) => {
       .where(eq(tenants.id, tenantId))
       .returning();
 
-    // Handle branding updates if logo URLs provided
-    if (mellonLogoUrl !== undefined || tenantLogoUrl !== undefined) {
+    // Handle branding updates if logo URLs or theme provided
+    if (mellonLogoUrl !== undefined || tenantLogoUrl !== undefined || themeId !== undefined) {
       // Check if branding record exists
       const existingBranding = await db
         .select({ id: tenantBranding.id })
@@ -372,12 +388,15 @@ export const PATCH: APIRoute = async ({ cookies, params, request }) => {
       if (tenantLogoUrl !== undefined) {
         brandingUpdates.tenantLogoUrl = tenantLogoUrl;
       }
+      if (themeId !== undefined) {
+        brandingUpdates.themeId = themeId;
+      }
 
       if (existingBranding.length === 0) {
         // Create new branding record
         await db.insert(tenantBranding).values({
           tenantId,
-          themeId: 'light',
+          themeId: themeId || 'light',
           ...brandingUpdates,
         });
       } else {
