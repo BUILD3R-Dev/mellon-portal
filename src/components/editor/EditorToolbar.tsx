@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils/cn';
 interface EditorToolbarProps {
   editor: Editor | null;
   disabled?: boolean;
+  onImageUpload?: (file: File) => Promise<string>;
 }
 
 interface ToolbarButtonProps {
@@ -45,10 +46,21 @@ function ToolbarDivider() {
   return <div className="w-px h-6 bg-gray-200 mx-1" aria-hidden="true" />;
 }
 
-export function EditorToolbar({ editor, disabled = false }: EditorToolbarProps) {
+const EMOJI_LIST = [
+  '😀', '😂', '😊', '😍', '🤔', '😎', '👍', '👎',
+  '👏', '🎉', '🔥', '💯', '❤️', '⭐', '✅', '❌',
+  '⚡', '💡', '📌', '📝', '🚀', '💪', '🙌', '👀',
+  '📈', '📉', '💰', '🏠', '📞', '📧', '🤝', '🎯',
+];
+
+export function EditorToolbar({ editor, disabled = false, onImageUpload }: EditorToolbarProps) {
   const [showLinkInput, setShowLinkInput] = React.useState(false);
   const [linkUrl, setLinkUrl] = React.useState('');
   const linkInputRef = React.useRef<HTMLInputElement>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = React.useState(false);
+  const [imageUploading, setImageUploading] = React.useState(false);
+  const imageInputRef = React.useRef<HTMLInputElement>(null);
+  const emojiPickerRef = React.useRef<HTMLDivElement>(null);
 
   const handleSetLink = () => {
     if (!editor || !linkUrl) return;
@@ -86,6 +98,41 @@ export function EditorToolbar({ editor, disabled = false }: EditorToolbarProps) 
     editor.chain().focus().unsetLink().run();
     setShowLinkInput(false);
     setLinkUrl('');
+  };
+
+  // Close emoji picker when clicking outside
+  React.useEffect(() => {
+    if (!showEmojiPicker) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showEmojiPicker]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editor || !onImageUpload) return;
+
+    setImageUploading(true);
+    try {
+      const url = await onImageUpload(file);
+      editor.chain().focus().setImage({ src: url }).run();
+    } catch {
+      // Upload failed — handled by caller
+    } finally {
+      setImageUploading(false);
+      // Reset input so the same file can be re-selected
+      if (imageInputRef.current) imageInputRef.current.value = '';
+    }
+  };
+
+  const handleEmojiInsert = (emoji: string) => {
+    if (!editor) return;
+    editor.chain().focus().insertContent(emoji).run();
+    setShowEmojiPicker(false);
   };
 
   const isDisabled = disabled || !editor;
@@ -223,6 +270,65 @@ export function EditorToolbar({ editor, disabled = false }: EditorToolbarProps) 
             >
               Cancel
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* Image upload */}
+      {onImageUpload && (
+        <>
+          <ToolbarDivider />
+          <ToolbarButton
+            onClick={() => imageInputRef.current?.click()}
+            disabled={isDisabled || imageUploading}
+            ariaLabel="Upload image"
+          >
+            {imageUploading ? (
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            )}
+          </ToolbarButton>
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            className="hidden"
+            onChange={handleImageUpload}
+          />
+        </>
+      )}
+
+      {/* Emoji picker */}
+      <ToolbarDivider />
+      <div className="relative" ref={emojiPickerRef}>
+        <ToolbarButton
+          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          disabled={isDisabled}
+          ariaLabel="Insert emoji"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </ToolbarButton>
+
+        {showEmojiPicker && (
+          <div className="absolute top-full left-0 mt-1 p-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10 grid grid-cols-8 gap-1 w-72">
+            {EMOJI_LIST.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => handleEmojiInsert(emoji)}
+                className="p-1.5 text-lg hover:bg-gray-100 rounded transition-colors"
+              >
+                {emoji}
+              </button>
+            ))}
           </div>
         )}
       </div>

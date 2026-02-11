@@ -1,6 +1,5 @@
 import * as React from 'react';
-
-type TimeWindow = 'report-week' | 'rolling-7';
+import { RichTextEditor } from '../editor/RichTextEditor';
 
 interface NoteData {
   id: string;
@@ -17,26 +16,7 @@ interface NotesIslandProps {
   canAddNotes: boolean;
 }
 
-const TIME_WINDOW_STORAGE_KEY = 'dashboard-time-window';
 const PAGE_SIZE = 50;
-
-function getStoredTimeWindow(): TimeWindow {
-  try {
-    const stored = localStorage.getItem(TIME_WINDOW_STORAGE_KEY);
-    if (stored === 'rolling-7') return 'rolling-7';
-  } catch {
-    // localStorage may be unavailable
-  }
-  return 'report-week';
-}
-
-function storeTimeWindow(value: TimeWindow): void {
-  try {
-    localStorage.setItem(TIME_WINDOW_STORAGE_KEY, value);
-  } catch {
-    // localStorage may be unavailable
-  }
-}
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -53,8 +33,14 @@ function getDisplayAuthor(note: NoteData): string {
   return note.authorUserName || note.author || 'Unknown Author';
 }
 
+/**
+ * Checks if a string contains HTML tags.
+ */
+function isHtmlContent(content: string): boolean {
+  return /<[a-z][\s\S]*>/i.test(content);
+}
+
 export function NotesIsland({ canAddNotes }: NotesIslandProps) {
-  const [timeWindow, setTimeWindow] = React.useState<TimeWindow>('report-week');
   const [notes, setNotes] = React.useState<NoteData[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [hasMore, setHasMore] = React.useState(false);
@@ -70,11 +56,6 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
 
   // Notification state
   const [notification, setNotification] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
-
-  // Read persisted time window on mount
-  React.useEffect(() => {
-    setTimeWindow(getStoredTimeWindow());
-  }, []);
 
   // Auto-hide notification
   React.useEffect(() => {
@@ -92,7 +73,7 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Fetch notes when timeWindow or search changes
+  // Fetch notes
   React.useEffect(() => {
     let cancelled = false;
 
@@ -103,7 +84,7 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
         const params = new URLSearchParams({
           limit: String(PAGE_SIZE),
           offset: '0',
-          timeWindow,
+          timeWindow: 'rolling-7',
         });
         if (debouncedSearch.trim()) {
           params.set('search', debouncedSearch.trim());
@@ -125,12 +106,7 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
 
     fetchNotes();
     return () => { cancelled = true; };
-  }, [timeWindow, debouncedSearch]);
-
-  function handleTimeWindowChange(value: TimeWindow) {
-    setTimeWindow(value);
-    storeTimeWindow(value);
-  }
+  }, [debouncedSearch]);
 
   async function handleLoadMore() {
     setLoadingMore(true);
@@ -138,7 +114,7 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
       const params = new URLSearchParams({
         limit: String(PAGE_SIZE),
         offset: String(offset),
-        timeWindow,
+        timeWindow: 'rolling-7',
       });
       if (debouncedSearch.trim()) {
         params.set('search', debouncedSearch.trim());
@@ -158,16 +134,36 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
     }
   }
 
+  async function handleImageUpload(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('/api/uploads/notes', {
+      method: 'POST',
+      body: formData,
+    });
+    const result = await response.json();
+
+    if (!result.success) {
+      setNotification({ type: 'error', message: result.error || 'Failed to upload image' });
+      throw new Error(result.error);
+    }
+
+    return result.url;
+  }
+
   async function handleSubmitNote(e: React.FormEvent) {
     e.preventDefault();
-    if (!noteContent.trim() || submitting) return;
+    // Strip tags to check if there's actual content
+    const textOnly = noteContent.replace(/<[^>]*>/g, '').trim();
+    if (!textOnly || submitting) return;
 
     setSubmitting(true);
     try {
       const response = await fetch('/api/dashboard/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: noteContent.trim() }),
+        body: JSON.stringify({ content: noteContent }),
       });
       const result = await response.json();
 
@@ -215,37 +211,9 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
         </div>
       )}
 
-      {/* Time Window Toggle + Add Note Button */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-600 mr-2">Time window:</span>
-          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
-            <button
-              type="button"
-              onClick={() => handleTimeWindowChange('report-week')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                timeWindow === 'report-week'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Current Report Week
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTimeWindowChange('rolling-7')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                timeWindow === 'rolling-7'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Rolling 7 Days
-            </button>
-          </div>
-        </div>
-
-        {canAddNotes && !showForm && (
+      {/* Add Note Button */}
+      {canAddNotes && !showForm && (
+        <div className="flex items-center justify-end">
           <button
             type="button"
             onClick={() => setShowForm(true)}
@@ -256,24 +224,22 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
             </svg>
             Add Note
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Add Note Form */}
       {canAddNotes && showForm && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h3 className="text-sm font-semibold text-gray-900 mb-3">New Note</h3>
           <form onSubmit={handleSubmitNote}>
-            <textarea
+            <RichTextEditor
               value={noteContent}
-              onChange={(e) => setNoteContent(e.target.value)}
+              onChange={setNoteContent}
               placeholder="Write your note..."
-              rows={4}
-              maxLength={10000}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-y text-sm"
+              onImageUpload={handleImageUpload}
+              disabled={submitting}
             />
-            <div className="flex items-center justify-between mt-3">
-              <span className="text-xs text-gray-400">{noteContent.length.toLocaleString()} / 10,000</span>
+            <div className="flex items-center justify-end mt-3">
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -284,7 +250,7 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting || !noteContent.trim()}
+                  disabled={submitting || !noteContent.replace(/<[^>]*>/g, '').trim()}
                   className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submitting ? 'Saving...' : 'Save Note'}
@@ -324,7 +290,7 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
         </div>
       ) : notes.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500">
-          {debouncedSearch ? 'No notes match your search' : 'No notes available for this time window'}
+          {debouncedSearch ? 'No notes match your search' : 'No notes found in the last 7 days'}
         </div>
       ) : (
         <div className="space-y-4">
@@ -345,9 +311,20 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                    {note.content || 'No content'}
-                  </p>
+                  {note.content ? (
+                    isHtmlContent(note.content) ? (
+                      <div
+                        className="prose prose-sm max-w-none text-gray-600 prose-img:max-w-full prose-img:rounded-lg prose-a:text-blue-600 prose-a:underline"
+                        dangerouslySetInnerHTML={{ __html: note.content }}
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                        {note.content}
+                      </p>
+                    )
+                  ) : (
+                    <p className="text-sm text-gray-600">No content</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -364,7 +341,7 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
             disabled={loadingMore}
             className="px-6 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
-            {loadingMore ? 'Loading...' : 'Load More'}
+            {loadingMore ? 'Loading...' : 'Show More'}
           </button>
         </div>
       )}

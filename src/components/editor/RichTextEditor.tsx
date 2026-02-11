@@ -10,6 +10,7 @@ import * as React from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
+import Image from '@tiptap/extension-image';
 import { EditorToolbar } from './EditorToolbar';
 import { cn } from '@/lib/utils/cn';
 
@@ -24,6 +25,8 @@ export interface RichTextEditorProps {
   placeholder?: string;
   /** Additional CSS classes */
   className?: string;
+  /** Image upload handler — if provided, shows image button in toolbar */
+  onImageUpload?: (file: File) => Promise<string>;
 }
 
 export function RichTextEditor({
@@ -32,6 +35,7 @@ export function RichTextEditor({
   disabled = false,
   placeholder,
   className,
+  onImageUpload,
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -50,6 +54,13 @@ export function RichTextEditor({
         openOnClick: false,
         HTMLAttributes: {
           class: 'text-blue-600 underline hover:text-blue-800',
+        },
+      }),
+      Image.configure({
+        inline: true,
+        allowBase64: false,
+        HTMLAttributes: {
+          class: 'max-w-full h-auto rounded-lg',
         },
       }),
     ],
@@ -75,7 +86,7 @@ export function RichTextEditor({
   // Update editor content when value prop changes externally
   React.useEffect(() => {
     if (editor && editor.getHTML() !== value) {
-      editor.commands.setContent(value, false);
+      editor.commands.setContent(value, { emitUpdate: false });
     }
   }, [value, editor]);
 
@@ -95,7 +106,7 @@ export function RichTextEditor({
         className
       )}
     >
-      <EditorToolbar editor={editor} disabled={disabled} />
+      <EditorToolbar editor={editor} disabled={disabled} onImageUpload={onImageUpload} />
       <EditorContent editor={editor} />
     </div>
   );

@@ -162,12 +162,11 @@ export const GET: APIRoute = async ({ cookies, url }) => {
     // Build query conditions
     const conditions = [eq(ctNotes.tenantId, auth.tenantId!)];
 
-    // Add time window filter
-    if (timeWindowParam) {
-      const startDate = getTimeWindowStart(timeWindowParam);
-      if (startDate) {
-        conditions.push(gte(ctNotes.noteDate, startDate));
-      }
+    // Add time window filter (default to rolling-7 when not provided)
+    const effectiveTimeWindow = timeWindowParam || 'rolling-7';
+    const startDate = getTimeWindowStart(effectiveTimeWindow);
+    if (startDate) {
+      conditions.push(gte(ctNotes.noteDate, startDate));
     }
 
     // Add search filter if provided
