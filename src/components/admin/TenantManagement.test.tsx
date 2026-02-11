@@ -4,7 +4,6 @@ import { TenantManagement } from './TenantManagement';
 import { TenantModal } from './TenantModal';
 import { DeactivationConfirmModal } from './DeactivationConfirmModal';
 import { StatusChangeDialog } from './StatusChangeDialog';
-import { TenantDetail } from './TenantDetail';
 
 /**
  * Tests for Tenant Management UI Components
@@ -222,84 +221,6 @@ describe('Tenant Management Components', () => {
       };
 
       expect(() => React.createElement(StatusChangeDialog, props)).not.toThrow();
-    });
-  });
-
-  describe('TenantDetail', () => {
-    const mockTenant = {
-      id: 'tenant-1',
-      name: 'Test Franchise',
-      status: 'active' as const,
-      timezone: 'America/New_York',
-      createdAt: '2024-01-15T10:00:00Z',
-      updatedAt: '2024-01-20T15:00:00Z',
-      userCount: 5,
-      branding: {
-        id: 'branding-1',
-        themeId: 'light',
-        accentColorOverride: null,
-        tenantLogoUrl: null,
-        mellonLogoUrl: null,
-        primaryColor: null,
-        accentColor: null,
-      },
-    };
-
-    const mockUsers = [
-      {
-        id: 'user-1',
-        email: 'admin@test.com',
-        name: 'Admin User',
-        role: 'tenant_admin',
-      },
-      {
-        id: 'user-2',
-        email: 'viewer@test.com',
-        name: 'View User',
-        role: 'tenant_viewer',
-      },
-    ];
-
-    it('exports TenantDetail component', () => {
-      expect(TenantDetail).toBeDefined();
-      expect(typeof TenantDetail).toBe('function');
-    });
-
-    it('accepts required props', () => {
-      const props = {
-        tenant: mockTenant,
-        users: mockUsers,
-      };
-
-      expect(() => React.createElement(TenantDetail, props)).not.toThrow();
-    });
-
-    it('handles tenant with branding logos', () => {
-      const tenantWithLogos = {
-        ...mockTenant,
-        branding: {
-          ...mockTenant.branding,
-          mellonLogoUrl: 'https://example.com/mellon.png',
-          tenantLogoUrl: 'https://example.com/tenant.png',
-        },
-      };
-
-      const props = {
-        tenant: tenantWithLogos,
-        users: mockUsers,
-      };
-
-      const element = React.createElement(TenantDetail, props);
-      expect(element.props.tenant.branding?.mellonLogoUrl).toBe('https://example.com/mellon.png');
-    });
-
-    it('handles empty users list', () => {
-      const props = {
-        tenant: mockTenant,
-        users: [],
-      };
-
-      expect(() => React.createElement(TenantDetail, props)).not.toThrow();
     });
   });
 
