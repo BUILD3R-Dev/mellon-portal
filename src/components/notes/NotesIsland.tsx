@@ -54,6 +54,12 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
   const [submitting, setSubmitting] = React.useState(false);
   const [showForm, setShowForm] = React.useState(false);
 
+  // Edit/delete state
+  const [editingNoteId, setEditingNoteId] = React.useState<string | null>(null);
+  const [editContent, setEditContent] = React.useState('');
+  const [saving, setSaving] = React.useState(false);
+  const [deleting, setDeleting] = React.useState<string | null>(null);
+
   // Notification state
   const [notification, setNotification] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -182,6 +188,70 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
     }
   }
 
+  function startEditing(note: NoteData) {
+    setEditingNoteId(note.id);
+    setEditContent(note.content || '');
+  }
+
+  function cancelEditing() {
+    setEditingNoteId(null);
+    setEditContent('');
+  }
+
+  async function handleSaveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    const textOnly = editContent.replace(/<[^>]*>/g, '').trim();
+    if (!textOnly || saving || !editingNoteId) return;
+
+    setSaving(true);
+    try {
+      const response = await fetch('/api/dashboard/notes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingNoteId, content: editContent }),
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        setNotes((prev) => prev.map((n) => n.id === editingNoteId ? result.data : n));
+        setEditingNoteId(null);
+        setEditContent('');
+        setNotification({ type: 'success', message: 'Note updated successfully' });
+      } else {
+        setNotification({ type: 'error', message: result.error || 'Failed to update note' });
+      }
+    } catch {
+      setNotification({ type: 'error', message: 'Failed to update note. Please try again.' });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(noteId: string) {
+    if (!window.confirm('Are you sure you want to delete this note?')) return;
+
+    setDeleting(noteId);
+    try {
+      const response = await fetch('/api/dashboard/notes', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: noteId }),
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        setNotes((prev) => prev.filter((n) => n.id !== noteId));
+        setNotification({ type: 'success', message: 'Note deleted successfully' });
+      } else {
+        setNotification({ type: 'error', message: result.error || 'Failed to delete note' });
+      }
+    } catch {
+      setNotification({ type: 'error', message: 'Failed to delete note. Please try again.' });
+    } finally {
+      setDeleting(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Notification */}
@@ -296,37 +366,102 @@ export function NotesIsland({ canAddNotes }: NotesIslandProps) {
         <div className="space-y-4">
           {notes.map((note) => (
             <div key={note.id} className="bg-white rounded-xl border border-gray-200 p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2 flex-wrap">
+              {editingNoteId === note.id ? (
+                <form onSubmit={handleSaveEdit}>
+                  <div className="flex items-center gap-3 mb-3 flex-wrap">
                     <span className="text-sm font-medium text-gray-900">
                       {getDisplayAuthor(note)}
                     </span>
                     <span className="text-sm text-gray-500">
                       {formatDate(note.noteDate)}
                     </span>
-                    {note.source === 'manual' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                        Manual
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                      Editing
+                    </span>
+                  </div>
+                  <RichTextEditor
+                    value={editContent}
+                    onChange={setEditContent}
+                    placeholder="Write your note..."
+                    onImageUpload={handleImageUpload}
+                    disabled={saving}
+                  />
+                  <div className="flex items-center justify-end mt-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={cancelEditing}
+                      disabled={saving}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={saving || !editContent.replace(/<[^>]*>/g, '').trim()}
+                      className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {saving ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
+                      <span className="text-sm font-medium text-gray-900">
+                        {getDisplayAuthor(note)}
                       </span>
+                      <span className="text-sm text-gray-500">
+                        {formatDate(note.noteDate)}
+                      </span>
+                      {note.source === 'manual' && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                          Manual
+                        </span>
+                      )}
+                    </div>
+                    {note.content ? (
+                      isHtmlContent(note.content) ? (
+                        <div
+                          className="prose prose-sm max-w-none text-gray-600 prose-img:max-w-full prose-img:rounded-lg prose-a:text-blue-600 prose-a:underline"
+                          dangerouslySetInnerHTML={{ __html: note.content }}
+                        />
+                      ) : (
+                        <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                          {note.content}
+                        </p>
+                      )
+                    ) : (
+                      <p className="text-sm text-gray-600">No content</p>
                     )}
                   </div>
-                  {note.content ? (
-                    isHtmlContent(note.content) ? (
-                      <div
-                        className="prose prose-sm max-w-none text-gray-600 prose-img:max-w-full prose-img:rounded-lg prose-a:text-blue-600 prose-a:underline"
-                        dangerouslySetInnerHTML={{ __html: note.content }}
-                      />
-                    ) : (
-                      <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                        {note.content}
-                      </p>
-                    )
-                  ) : (
-                    <p className="text-sm text-gray-600">No content</p>
+                  {canAddNotes && note.source === 'manual' && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => startEditing(note)}
+                        className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                        title="Edit note"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(note.id)}
+                        disabled={deleting === note.id}
+                        className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                        title="Delete note"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
                   )}
                 </div>
-              </div>
+              )}
             </div>
           ))}
         </div>

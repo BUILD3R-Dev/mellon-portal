@@ -1,6 +1,8 @@
 /**
  * GET /api/dashboard/notes
  * POST /api/dashboard/notes
+ * PUT /api/dashboard/notes
+ * DELETE /api/dashboard/notes
  *
  * GET: Returns paginated notes for the authenticated tenant user.
  * Supports query params: limit (default 50), offset, search, timeWindow
@@ -8,6 +10,12 @@
  *
  * POST: Creates a new manual note for the authenticated tenant user.
  * Accepts { content: string } body.
+ *
+ * PUT: Updates a manual note owned by the authenticated user.
+ * Accepts { id: string, content: string } body.
+ *
+ * DELETE: Deletes a manual note owned by the authenticated user.
+ * Accepts { id: string } body.
  */
 import type { APIRoute } from 'astro';
 import { validateSession, SESSION_COOKIE_NAME, getUserMemberships, TENANT_COOKIE_NAME } from '@/lib/auth';
@@ -290,6 +298,162 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     }), { status: 201, headers: { 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error('Error creating note:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'An unexpected error occurred',
+      code: 'INTERNAL_ERROR',
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+  }
+};
+
+export const PUT: APIRoute = async ({ cookies, request }) => {
+  try {
+    const auth = await validateTenantAccess(cookies);
+    if (!auth.authorized) return auth.errorResponse!;
+
+    const body = await request.json();
+    const { id, content } = body;
+
+    if (!id || typeof id !== 'string') {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Note ID is required',
+        code: 'VALIDATION_ERROR',
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    if (!content || typeof content !== 'string' || !content.trim()) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Content is required',
+        code: 'VALIDATION_ERROR',
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    if (content.length > MAX_CONTENT_LENGTH) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: `Content must be ${MAX_CONTENT_LENGTH} characters or fewer`,
+        code: 'VALIDATION_ERROR',
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Fetch the note and verify ownership
+    const [note] = await db
+      .select()
+      .from(ctNotes)
+      .where(and(eq(ctNotes.id, id), eq(ctNotes.tenantId, auth.tenantId!)))
+      .limit(1);
+
+    if (!note) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Note not found',
+        code: 'NOT_FOUND',
+      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    if (note.source !== 'manual') {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Only manual notes can be edited',
+        code: 'FORBIDDEN',
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    if (note.authorUserId !== auth.userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only edit your own notes',
+        code: 'FORBIDDEN',
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Update the note
+    const [updatedNote] = await db
+      .update(ctNotes)
+      .set({ content: content.trim() })
+      .where(eq(ctNotes.id, id))
+      .returning();
+
+    return new Response(JSON.stringify({
+      success: true,
+      data: {
+        id: updatedNote.id,
+        contactId: updatedNote.contactId,
+        noteDate: updatedNote.noteDate.toISOString(),
+        author: updatedNote.author,
+        authorUserName: updatedNote.authorUserName,
+        source: updatedNote.source,
+        content: updatedNote.content,
+        createdAt: updatedNote.createdAt.toISOString(),
+      },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  } catch (error) {
+    console.error('Error updating note:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'An unexpected error occurred',
+      code: 'INTERNAL_ERROR',
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+  }
+};
+
+export const DELETE: APIRoute = async ({ cookies, request }) => {
+  try {
+    const auth = await validateTenantAccess(cookies);
+    if (!auth.authorized) return auth.errorResponse!;
+
+    const body = await request.json();
+    const { id } = body;
+
+    if (!id || typeof id !== 'string') {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Note ID is required',
+        code: 'VALIDATION_ERROR',
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Fetch the note and verify ownership
+    const [note] = await db
+      .select()
+      .from(ctNotes)
+      .where(and(eq(ctNotes.id, id), eq(ctNotes.tenantId, auth.tenantId!)))
+      .limit(1);
+
+    if (!note) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Note not found',
+        code: 'NOT_FOUND',
+      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    if (note.source !== 'manual') {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Only manual notes can be deleted',
+        code: 'FORBIDDEN',
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    if (note.authorUserId !== auth.userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only delete your own notes',
+        code: 'FORBIDDEN',
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Delete the note
+    await db.delete(ctNotes).where(eq(ctNotes.id, id));
+
+    return new Response(JSON.stringify({
+      success: true,
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  } catch (error) {
+    console.error('Error deleting note:', error);
     return new Response(JSON.stringify({
       success: false,
       error: 'An unexpected error occurred',
