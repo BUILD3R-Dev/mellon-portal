@@ -114,13 +114,14 @@ export function UserManagement({ initialUsers, tenants }: UserManagementProps) {
       {/* Header with Invite button */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Users</h2>
-          <p className="text-sm text-gray-500">Manage user access and invitations</p>
+          <h2 className="text-lg font-semibold" style={{ color: 'var(--foreground, #111827)' }}>Users</h2>
+          <p className="text-sm" style={{ color: 'var(--foreground-muted, #6B7280)' }}>Manage user access and invitations</p>
         </div>
         <button
           type="button"
           onClick={() => setIsInviteModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+          style={{ backgroundColor: 'var(--accent-color, #2563EB)', color: 'var(--accent-text, #FFFFFF)' }}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -157,37 +158,38 @@ export function UserManagement({ initialUsers, tenants }: UserManagementProps) {
       )}
 
       {/* Users table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="rounded-xl border overflow-hidden" style={{ backgroundColor: 'var(--card-background, #FFFFFF)', borderColor: 'var(--card-border, #E5E7EB)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <tr className="border-b" style={{ borderColor: 'var(--border, #E5E7EB)', backgroundColor: 'var(--background-secondary, #F9FAFB)' }}>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                   User
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                   Role
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                   Tenant
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                   Status
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y" style={{ borderColor: 'var(--border, #E5E7EB)' }}>
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-12 text-center" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                     <p className="mb-2">No users found</p>
                     <button
                       type="button"
                       onClick={() => setIsInviteModalOpen(true)}
-                      className="text-sm text-gray-900 hover:underline"
+                      className="text-sm hover:underline"
+                      style={{ color: 'var(--accent-color, #2563EB)' }}
                     >
                       Invite your first user
                     </button>
@@ -195,15 +197,15 @@ export function UserManagement({ initialUsers, tenants }: UserManagementProps) {
                 </tr>
               ) : (
                 users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
+                  <tr key={user.id} className="themed-table-row" style={{ borderColor: 'var(--border, #E5E7EB)' }}>
                     <td className="px-6 py-4">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{user.name || 'Pending'}</p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
+                        <p className="text-sm font-medium" style={{ color: 'var(--foreground, #111827)' }}>{user.name || 'Pending'}</p>
+                        <p className="text-sm" style={{ color: 'var(--foreground-muted, #6B7280)' }}>{user.email}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{formatRole(user.role)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{user.tenantName || '-'}</td>
+                    <td className="px-6 py-4 text-sm" style={{ color: 'var(--foreground, #111827)' }}>{formatRole(user.role)}</td>
+                    <td className="px-6 py-4 text-sm" style={{ color: 'var(--foreground-muted, #6B7280)' }}>{user.tenantName || '-'}</td>
                     <td className="px-6 py-4">
                       <StatusBadge status={user.status} />
                     </td>
@@ -213,7 +215,8 @@ export function UserManagement({ initialUsers, tenants }: UserManagementProps) {
                           type="button"
                           onClick={() => handleResendInvite(user.id, user.email)}
                           disabled={resendingId === user.id}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          style={{ color: 'var(--foreground, #111827)', backgroundColor: 'var(--card-background, #FFFFFF)', borderColor: 'var(--border, #E5E7EB)' }}
                         >
                           {resendingId === user.id ? (
                             <>
@@ -270,6 +273,15 @@ export function UserManagement({ initialUsers, tenants }: UserManagementProps) {
         onSuccess={handleInviteSuccess}
         tenants={tenants}
       />
+
+      <style>{`
+        .themed-table-row:hover {
+          background-color: var(--border-muted, #F3F4F6);
+        }
+        .divide-y > :not([hidden]) ~ :not([hidden]) {
+          border-color: var(--border, #E5E7EB);
+        }
+      `}</style>
     </div>
   );
 }
