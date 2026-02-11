@@ -62,18 +62,18 @@ function formatDate(dateString: string): string {
 function SortIndicator({ field, currentField, direction }: { field: SortField; currentField: SortField; direction: SortDirection }) {
   if (field !== currentField) {
     return (
-      <svg className="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg className="w-4 h-4" style={{ color: 'var(--border, #D1D5DB)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
       </svg>
     );
   }
 
   return direction === 'asc' ? (
-    <svg className="w-4 h-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-4 h-4" style={{ color: 'var(--foreground, #111827)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
     </svg>
   ) : (
-    <svg className="w-4 h-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-4 h-4" style={{ color: 'var(--foreground, #111827)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
     </svg>
   );
@@ -285,13 +285,14 @@ export function TenantManagement({ initialTenants }: TenantManagementProps) {
       {/* Header with Create button */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Tenants</h2>
-          <p className="text-sm text-gray-500">Manage franchise brand tenants</p>
+          <h2 className="text-lg font-semibold" style={{ color: 'var(--foreground, #111827)' }}>Tenants</h2>
+          <p className="text-sm" style={{ color: 'var(--foreground-muted, #6B7280)' }}>Manage franchise brand tenants</p>
         </div>
         <button
           type="button"
           onClick={() => setIsCreateModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+          style={{ backgroundColor: 'var(--accent-color, #2563EB)', color: 'var(--accent-text, #FFFFFF)' }}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -306,7 +307,7 @@ export function TenantManagement({ initialTenants }: TenantManagementProps) {
           <label htmlFor="search" className="sr-only">Search tenants</label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-5 w-5" style={{ color: 'var(--foreground-muted, #9CA3AF)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
@@ -316,7 +317,8 @@ export function TenantManagement({ initialTenants }: TenantManagementProps) {
               placeholder="Search tenants by name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all"
+              className="block w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+              style={{ backgroundColor: 'var(--card-background, #FFFFFF)', borderColor: 'var(--border, #E5E7EB)', color: 'var(--foreground, #111827)' }}
             />
           </div>
         </div>
@@ -326,7 +328,8 @@ export function TenantManagement({ initialTenants }: TenantManagementProps) {
             id="status-filter"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-            className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all bg-white"
+            className="block w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+            style={{ backgroundColor: 'var(--card-background, #FFFFFF)', borderColor: 'var(--border, #E5E7EB)', color: 'var(--foreground, #111827)' }}
           >
             <option value="all">All Statuses</option>
             <option value="active">Active</option>
@@ -364,14 +367,15 @@ export function TenantManagement({ initialTenants }: TenantManagementProps) {
       )}
 
       {/* Tenants table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="rounded-xl border overflow-hidden" style={{ backgroundColor: 'var(--card-background, #FFFFFF)', borderColor: 'var(--card-border, #E5E7EB)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
+              <tr className="border-b" style={{ borderColor: 'var(--border, #E5E7EB)', backgroundColor: 'var(--background-secondary, #F9FAFB)' }}>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors"
+                  style={{ color: 'var(--foreground-muted, #6B7280)' }}
                   onClick={() => handleSort('name')}
                 >
                   <div className="flex items-center gap-2">
@@ -381,7 +385,8 @@ export function TenantManagement({ initialTenants }: TenantManagementProps) {
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors"
+                  style={{ color: 'var(--foreground-muted, #6B7280)' }}
                   onClick={() => handleSort('status')}
                 >
                   <div className="flex items-center gap-2">
@@ -391,7 +396,8 @@ export function TenantManagement({ initialTenants }: TenantManagementProps) {
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors"
+                  style={{ color: 'var(--foreground-muted, #6B7280)' }}
                   onClick={() => handleSort('timezone')}
                 >
                   <div className="flex items-center gap-2">
@@ -401,7 +407,8 @@ export function TenantManagement({ initialTenants }: TenantManagementProps) {
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors"
+                  style={{ color: 'var(--foreground-muted, #6B7280)' }}
                   onClick={() => handleSort('createdAt')}
                 >
                   <div className="flex items-center gap-2">
@@ -409,22 +416,22 @@ export function TenantManagement({ initialTenants }: TenantManagementProps) {
                     <SortIndicator field="createdAt" currentField={sortField} direction={sortDirection} />
                   </div>
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y" style={{ borderColor: 'var(--border, #E5E7EB)' }}>
               {filteredTenants.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-12 text-center" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                     <div className="flex flex-col items-center gap-3">
-                      <svg className="w-12 h-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-12 h-12" style={{ color: 'var(--border, #D1D5DB)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                       </svg>
                       {searchQuery || statusFilter !== 'all' ? (
                         <>
-                          <p className="text-gray-900 font-medium">No tenants match your filters</p>
+                          <p className="font-medium" style={{ color: 'var(--foreground, #111827)' }}>No tenants match your filters</p>
                           <p className="text-sm">Try adjusting your search or filter criteria</p>
                           <button
                             type="button"
@@ -432,19 +439,21 @@ export function TenantManagement({ initialTenants }: TenantManagementProps) {
                               setSearchQuery('');
                               setStatusFilter('all');
                             }}
-                            className="mt-2 text-sm font-medium text-gray-900 hover:underline"
+                            className="mt-2 text-sm font-medium hover:underline"
+                            style={{ color: 'var(--accent-color, #2563EB)' }}
                           >
                             Clear filters
                           </button>
                         </>
                       ) : (
                         <>
-                          <p className="text-gray-900 font-medium">No tenants yet</p>
+                          <p className="font-medium" style={{ color: 'var(--foreground, #111827)' }}>No tenants yet</p>
                           <p className="text-sm">Get started by creating your first tenant</p>
                           <button
                             type="button"
                             onClick={() => setIsCreateModalOpen(true)}
-                            className="mt-2 text-sm font-medium text-gray-900 hover:underline"
+                            className="mt-2 text-sm font-medium hover:underline"
+                            style={{ color: 'var(--accent-color, #2563EB)' }}
                           >
                             Create your first tenant
                           </button>
@@ -455,28 +464,30 @@ export function TenantManagement({ initialTenants }: TenantManagementProps) {
                 </tr>
               ) : (
                 filteredTenants.map((tenant) => (
-                  <tr key={tenant.id} className="hover:bg-gray-50">
+                  <tr key={tenant.id} className="themed-table-row" style={{ borderColor: 'var(--border, #E5E7EB)' }}>
                     <td className="px-6 py-4">
                       <div>
                         <a
                           href={`/admin/tenants/${tenant.id}`}
-                          className="text-sm font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                          className="text-sm font-medium hover:underline"
+                          style={{ color: 'var(--foreground, #111827)' }}
                         >
                           {tenant.name}
                         </a>
-                        <p className="text-xs text-gray-500">{tenant.id}</p>
+                        <p className="text-xs" style={{ color: 'var(--foreground-muted, #6B7280)' }}>{tenant.id}</p>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <StatusBadge status={tenant.status} />
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{tenant.timezone}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{formatDate(tenant.createdAt)}</td>
+                    <td className="px-6 py-4 text-sm" style={{ color: 'var(--foreground-muted, #6B7280)' }}>{tenant.timezone}</td>
+                    <td className="px-6 py-4 text-sm" style={{ color: 'var(--foreground-muted, #6B7280)' }}>{formatDate(tenant.createdAt)}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <a
                           href={`/admin/tenants/${tenant.id}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors"
+                          style={{ color: 'var(--foreground, #111827)', backgroundColor: 'var(--card-background, #FFFFFF)', borderColor: 'var(--border, #E5E7EB)' }}
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -487,7 +498,8 @@ export function TenantManagement({ initialTenants }: TenantManagementProps) {
                         <button
                           type="button"
                           onClick={() => setEditingTenant(tenant)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors"
+                          style={{ color: 'var(--foreground, #111827)', backgroundColor: 'var(--card-background, #FFFFFF)', borderColor: 'var(--border, #E5E7EB)' }}
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -529,7 +541,7 @@ export function TenantManagement({ initialTenants }: TenantManagementProps) {
 
       {/* Results summary */}
       {tenants.length > 0 && (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
           Showing {filteredTenants.length} of {tenants.length} tenant{tenants.length !== 1 ? 's' : ''}
           {(searchQuery || statusFilter !== 'all') && ' (filtered)'}
         </p>
@@ -572,6 +584,15 @@ export function TenantManagement({ initialTenants }: TenantManagementProps) {
         newStatus={statusChangeTenant?.newStatus || 'active'}
         isLoading={isChangingStatus}
       />
+
+      <style>{`
+        .themed-table-row:hover {
+          background-color: var(--border-muted, #F3F4F6);
+        }
+        .divide-y > :not([hidden]) ~ :not([hidden]) {
+          border-color: var(--border, #E5E7EB);
+        }
+      `}</style>
     </div>
   );
 }

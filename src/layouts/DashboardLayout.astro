@@ -122,6 +122,16 @@ let portalBrandingData: {
   adminThemeId: string;
 } | null = null;
 
+// Always fetch portal branding (footer logo + favicon apply to all contexts)
+try {
+  const pbResult = await db.select().from(portalBranding).limit(1);
+  if (pbResult.length > 0) {
+    portalBrandingData = pbResult[0];
+  }
+} catch (error) {
+  console.error('Error fetching portal branding:', error);
+}
+
 if (tenantId) {
   try {
     const brandingResult = await db
@@ -144,17 +154,9 @@ if (tenantId) {
   } catch (error) {
     console.error('Error fetching tenant branding:', error);
   }
-} else {
-  // Admin context: fetch portal branding
-  try {
-    const pbResult = await db.select().from(portalBranding).limit(1);
-    if (pbResult.length > 0) {
-      portalBrandingData = pbResult[0];
-      cssVariables = generateCSSRootBlock(portalBrandingData.adminThemeId || 'light');
-    }
-  } catch (error) {
-    console.error('Error fetching portal branding:', error);
-  }
+} else if (portalBrandingData) {
+  // Admin context: use portal branding for theme
+  cssVariables = generateCSSRootBlock(portalBrandingData.adminThemeId || 'light');
 }
 
 // Determine header logo based on context
@@ -168,10 +170,12 @@ if (tenantId) {
     : portalBrandingData.headerLogoLightUrl;
 }
 
-// Determine footer logo for admin context
+// Determine footer logo (shown on both admin and client dashboards)
 let footerLogoUrl: string | null = null;
-if (!tenantId && portalBrandingData) {
-  const isDark = portalBrandingData.adminThemeId === 'dark';
+if (portalBrandingData) {
+  const isDark = tenantId
+    ? (tenantBrandingData?.themeId === 'dark')
+    : (portalBrandingData.adminThemeId === 'dark');
   footerLogoUrl = isDark
     ? (portalBrandingData.footerLogoDarkUrl || portalBrandingData.footerLogoLightUrl)
     : portalBrandingData.footerLogoLightUrl;
@@ -399,18 +403,18 @@ const inTenantContext = !!tenantId;
     <footer class="border-t py-6" style="background-color: var(--background-secondary, #FFFFFF); border-color: var(--border, #E5E7EB);">
       <div class="container mx-auto px-4">
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-          {footerLogoUrl ? (
-            <img
-              src={footerLogoUrl}
-              alt="Footer logo"
-              class="h-6 max-w-[140px] object-contain"
-            />
-          ) : (
-            <div class="flex items-center gap-2">
-              <span class="text-sm" style="color: var(--foreground-muted, #6B7280);">Powered by</span>
+          <div class="flex items-center gap-2">
+            <span class="text-sm" style="color: var(--foreground-muted, #6B7280);">Powered by</span>
+            {footerLogoUrl ? (
+              <img
+                src={footerLogoUrl}
+                alt="Mellon Franchising"
+                class="h-6 max-w-[140px] object-contain"
+              />
+            ) : (
               <span class="text-sm font-semibold" style="color: var(--accent-color, #2563EB);">Mellon Franchising</span>
-            </div>
-          )}
+            )}
+          </div>
           <span class="hidden sm:inline h-4 w-px" style="background-color: var(--border, #E5E7EB);"></span>
           <span class="text-xs" style="color: var(--foreground-muted, #9CA3AF);">
             &copy; {new Date().getFullYear()} Mellon Franchising. All rights reserved.
