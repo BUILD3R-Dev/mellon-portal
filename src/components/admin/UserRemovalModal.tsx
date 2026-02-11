@@ -75,7 +75,8 @@ export function UserRemovalModal({
       <div
         ref={modalRef}
         tabIndex={-1}
-        className="relative w-full max-w-md bg-white rounded-xl shadow-xl mx-4"
+        className="relative w-full max-w-md rounded-xl shadow-xl mx-4"
+        style={{ backgroundColor: 'var(--card-background, white)', color: 'var(--foreground, #111827)' }}
       >
         {/* Content */}
         <div className="p-6">
@@ -100,19 +101,27 @@ export function UserRemovalModal({
           {/* Title */}
           <h3
             id="removal-modal-title"
-            className="text-lg font-semibold text-gray-900 text-center mb-2"
+            className="text-lg font-semibold text-center mb-2"
+            style={{ color: 'var(--foreground, #111827)' }}
           >
             Remove User from Tenant
           </h3>
 
           {/* Description */}
-          <p id="removal-modal-description" className="text-sm text-gray-600 text-center mb-6">
+          <p
+            id="removal-modal-description"
+            className="text-sm text-center mb-6"
+            style={{ color: 'var(--foreground-muted, #6B7280)' }}
+          >
             Are you sure you want to remove{' '}
             <span className="font-semibold">{displayName}</span> from this tenant?
           </p>
 
           {/* Warning list */}
-          <ul className="text-sm text-gray-600 space-y-2 mb-6 bg-red-50 rounded-lg p-4 border border-red-200">
+          <ul
+            className="text-sm space-y-2 mb-6 bg-red-50 rounded-lg p-4 border border-red-200"
+            style={{ color: 'var(--foreground-muted, #6B7280)' }}
+          >
             <li className="flex items-start gap-2">
               <svg
                 className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"
@@ -167,9 +176,10 @@ export function UserRemovalModal({
           <div className="mb-6">
             <label
               htmlFor="confirm-email"
-              className="block text-sm font-medium text-gray-700 mb-1.5"
+              className="block text-sm font-medium mb-1.5"
+              style={{ color: 'var(--foreground, #111827)' }}
             >
-              Type <span className="font-mono bg-gray-100 px-1 py-0.5 rounded">{userEmail}</span> to
+              Type <span className="font-mono px-1 py-0.5 rounded" style={{ backgroundColor: 'var(--background-secondary, #F3F4F6)' }}>{userEmail}</span> to
               confirm
             </label>
             <input
@@ -178,7 +188,8 @@ export function UserRemovalModal({
               value={confirmationEmail}
               onChange={(e) => setConfirmationEmail(e.target.value)}
               disabled={isLoading}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-2.5 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: 'var(--background-secondary, #F9FAFB)', color: 'var(--foreground, #111827)', border: '1px solid var(--border, #D1D5DB)' }}
               placeholder="Enter email to confirm"
               autoComplete="off"
             />
@@ -190,7 +201,8 @@ export function UserRemovalModal({
               type="button"
               onClick={onClose}
               disabled={isLoading}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: 'var(--card-background, white)', color: 'var(--foreground, #374151)', border: '1px solid var(--border, #D1D5DB)' }}
             >
               Cancel
             </button>

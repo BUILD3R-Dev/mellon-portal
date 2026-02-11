@@ -65,7 +65,8 @@ export function UserDeactivationModal({
       <div
         ref={modalRef}
         tabIndex={-1}
-        className="relative w-full max-w-md bg-white rounded-xl shadow-xl mx-4"
+        className="relative w-full max-w-md rounded-xl shadow-xl mx-4"
+        style={{ backgroundColor: 'var(--card-background, white)', color: 'var(--foreground, #111827)' }}
       >
         {/* Content */}
         <div className="p-6">
@@ -90,7 +91,8 @@ export function UserDeactivationModal({
           {/* Title */}
           <h3
             id="deactivation-modal-title"
-            className="text-lg font-semibold text-gray-900 text-center mb-2"
+            className="text-lg font-semibold text-center mb-2"
+            style={{ color: 'var(--foreground, #111827)' }}
           >
             Deactivate User
           </h3>
@@ -98,14 +100,18 @@ export function UserDeactivationModal({
           {/* Description */}
           <p
             id="deactivation-modal-description"
-            className="text-sm text-gray-600 text-center mb-6"
+            className="text-sm text-center mb-6"
+            style={{ color: 'var(--foreground-muted, #6B7280)' }}
           >
             Are you sure you want to deactivate{' '}
             <span className="font-semibold">{displayName}</span>?
           </p>
 
           {/* Warning list */}
-          <ul className="text-sm text-gray-600 space-y-2 mb-6 bg-gray-50 rounded-lg p-4">
+          <ul
+            className="text-sm space-y-2 mb-6 rounded-lg p-4"
+            style={{ backgroundColor: 'var(--background-secondary, #F3F4F6)', color: 'var(--foreground-muted, #6B7280)' }}
+          >
             <li className="flex items-start gap-2">
               <svg
                 className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5"
@@ -146,7 +152,8 @@ export function UserDeactivationModal({
               type="button"
               onClick={onClose}
               disabled={isLoading}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: 'var(--card-background, white)', color: 'var(--foreground, #374151)', border: '1px solid var(--border, #D1D5DB)' }}
             >
               Cancel
             </button>

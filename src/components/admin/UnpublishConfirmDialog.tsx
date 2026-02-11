@@ -64,7 +64,8 @@ export function UnpublishConfirmDialog({
       <div
         ref={modalRef}
         tabIndex={-1}
-        className="relative w-full max-w-md bg-white rounded-xl shadow-xl mx-4"
+        className="relative w-full max-w-md rounded-xl shadow-xl mx-4"
+        style={{ backgroundColor: 'var(--card-background, white)', color: 'var(--foreground, #111827)' }}
       >
         {/* Content */}
         <div className="p-6">
@@ -89,7 +90,8 @@ export function UnpublishConfirmDialog({
           {/* Title */}
           <h3
             id="unpublish-modal-title"
-            className="text-lg font-semibold text-gray-900 text-center mb-2"
+            className="text-lg font-semibold text-center mb-2"
+            style={{ color: 'var(--foreground, #111827)' }}
           >
             Unpublish Report Week
           </h3>
@@ -97,7 +99,8 @@ export function UnpublishConfirmDialog({
           {/* Description */}
           <p
             id="unpublish-modal-description"
-            className="text-sm text-gray-600 text-center mb-4"
+            className="text-sm text-center mb-4"
+            style={{ color: 'var(--foreground-muted, #6B7280)' }}
           >
             Are you sure you want to unpublish the report for{' '}
             <span className="font-semibold">{weekPeriod}</span>?
@@ -117,7 +120,8 @@ export function UnpublishConfirmDialog({
               type="button"
               onClick={onClose}
               disabled={isLoading}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: 'var(--card-background, white)', color: 'var(--foreground, #374151)', border: '1px solid var(--border, #D1D5DB)' }}
             >
               Cancel
             </button>

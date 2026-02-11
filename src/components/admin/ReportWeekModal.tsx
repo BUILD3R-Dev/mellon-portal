@@ -255,17 +255,22 @@ export function ReportWeekModal({
       <div
         ref={modalRef}
         tabIndex={-1}
-        className="relative w-full max-w-md bg-white rounded-xl shadow-xl mx-4 max-h-[90vh] overflow-y-auto"
+        className="relative w-full max-w-md rounded-xl shadow-xl mx-4 max-h-[90vh] overflow-y-auto"
+        style={{ backgroundColor: 'var(--card-background, white)', color: 'var(--foreground, #111827)' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 id="report-week-modal-title" className="text-lg font-semibold text-gray-900">
+        <div
+          className="flex items-center justify-between p-6 border-b"
+          style={{ borderColor: 'var(--border, #E5E7EB)' }}
+        >
+          <h2 id="report-week-modal-title" className="text-lg font-semibold" style={{ color: 'var(--foreground, #111827)' }}>
             {mode === 'create' ? 'Create Report Week' : 'Edit Report Week'}
           </h2>
           <button
             type="button"
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="transition-colors"
+            style={{ color: 'var(--foreground-muted, #6B7280)' }}
             aria-label="Close modal"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -297,7 +302,8 @@ export function ReportWeekModal({
             <div>
               <label
                 htmlFor="weekEndingDate"
-                className="block text-sm font-medium text-gray-700 mb-1.5"
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: 'var(--foreground, #111827)' }}
               >
                 Week Ending Date (Friday)
               </label>
@@ -309,7 +315,8 @@ export function ReportWeekModal({
                 onChange={handleInputChange}
                 required
                 disabled={isSubmitting}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-2.5 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: 'var(--background-secondary, #F9FAFB)', color: 'var(--foreground, #111827)', border: '1px solid var(--border, #D1D5DB)' }}
                 aria-invalid={!!errors.weekEndingDate}
                 aria-describedby={errors.weekEndingDate ? 'weekEndingDate-error' : 'weekEndingDate-hint'}
               />
@@ -318,7 +325,7 @@ export function ReportWeekModal({
                   {errors.weekEndingDate}
                 </p>
               ) : (
-                <p id="weekEndingDate-hint" className="mt-1 text-xs text-gray-500">
+                <p id="weekEndingDate-hint" className="mt-1 text-xs" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                   Select a Friday as the week ending date
                 </p>
               )}
@@ -326,28 +333,34 @@ export function ReportWeekModal({
 
             {/* Week Period Display */}
             {isFridaySelected && (
-              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                <h3 className="text-sm font-medium text-gray-900">Week Period Preview</h3>
+              <div
+                className="rounded-lg p-4 space-y-3"
+                style={{ backgroundColor: 'var(--background-secondary, #F3F4F6)' }}
+              >
+                <h3 className="text-sm font-medium" style={{ color: 'var(--foreground, #111827)' }}>Week Period Preview</h3>
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Start Date (Monday):</span>
-                    <span className="text-gray-900 font-medium">
+                    <span style={{ color: 'var(--foreground-muted, #6B7280)' }}>Start Date (Monday):</span>
+                    <span className="font-medium" style={{ color: 'var(--foreground, #111827)' }}>
                       {formatDateDisplay(mondayDate)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">End Date (Friday):</span>
-                    <span className="text-gray-900 font-medium">
+                    <span style={{ color: 'var(--foreground-muted, #6B7280)' }}>End Date (Friday):</span>
+                    <span className="font-medium" style={{ color: 'var(--foreground, #111827)' }}>
                       {formatDateDisplay(formState.weekEndingDate)}
                     </span>
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-gray-200">
+                <div className="pt-2 border-t" style={{ borderColor: 'var(--border, #E5E7EB)' }}>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Week Period:</span>
-                    <span className="text-sm font-semibold text-gray-900 bg-white px-3 py-1 rounded border border-gray-200">
+                    <span className="text-sm" style={{ color: 'var(--foreground-muted, #6B7280)' }}>Week Period:</span>
+                    <span
+                      className="text-sm font-semibold px-3 py-1 rounded"
+                      style={{ color: 'var(--foreground, #111827)', backgroundColor: 'var(--card-background, white)', border: '1px solid var(--border, #E5E7EB)' }}
+                    >
                       {weekPeriod}
                     </span>
                   </div>
@@ -384,7 +397,7 @@ export function ReportWeekModal({
             )}
 
             {/* Timezone notice */}
-            <p className="text-xs text-gray-500">
+            <p className="text-xs" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
               Dates are calculated in the tenant's timezone: {tenantTimezone}
             </p>
 
@@ -394,14 +407,16 @@ export function ReportWeekModal({
                 type="button"
                 onClick={handleClose}
                 disabled={isSubmitting}
-                className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: 'var(--card-background, white)', color: 'var(--foreground, #374151)', border: '1px solid var(--border, #D1D5DB)' }}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting || !isFridaySelected}
-                className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                style={{ backgroundColor: 'var(--accent-color, #1F2937)' }}
               >
                 {isSubmitting ? (
                   <>

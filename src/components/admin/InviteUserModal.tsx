@@ -163,8 +163,6 @@ export function InviteUserModal({ isOpen, onClose, onSuccess, tenants }: InviteU
       // Show success state
       setSuccessData({
         email: data.data.email,
-        // Note: For security, the API doesn't return the full invite link
-        // Admin can resend if needed
       });
       setShowSuccess(true);
       setIsSubmitting(false);
@@ -203,17 +201,22 @@ export function InviteUserModal({ isOpen, onClose, onSuccess, tenants }: InviteU
       <div
         ref={modalRef}
         tabIndex={-1}
-        className="relative w-full max-w-md bg-white rounded-xl shadow-xl mx-4 max-h-[90vh] overflow-y-auto"
+        className="relative w-full max-w-md rounded-xl shadow-xl mx-4 max-h-[90vh] overflow-y-auto"
+        style={{ backgroundColor: 'var(--card-background, white)', color: 'var(--foreground, #111827)' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 id="invite-modal-title" className="text-lg font-semibold text-gray-900">
+        <div
+          className="flex items-center justify-between p-6 border-b"
+          style={{ borderColor: 'var(--border, #E5E7EB)' }}
+        >
+          <h2 id="invite-modal-title" className="text-lg font-semibold">
             {showSuccess ? 'Invite Sent' : 'Invite User'}
           </h2>
           <button
             type="button"
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="transition-colors"
+            style={{ color: 'var(--foreground-muted, #6B7280)' }}
             aria-label="Close modal"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -231,22 +234,24 @@ export function InviteUserModal({ isOpen, onClose, onSuccess, tenants }: InviteU
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <p className="text-gray-900 font-medium mb-2">Invitation sent successfully!</p>
-              <p className="text-gray-600 text-sm mb-6">
+              <p className="font-medium mb-2">Invitation sent successfully!</p>
+              <p className="text-sm mb-6" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                 An invitation email has been sent to <span className="font-medium">{successData.email}</span>
               </p>
               <div className="flex gap-3">
                 <button
                   type="button"
                   onClick={handleInviteAnother}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+                  style={{ backgroundColor: 'var(--card-background, white)', color: 'var(--foreground, #374151)', border: '1px solid var(--border, #D1D5DB)' }}
                 >
                   Invite another
                 </button>
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors"
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors"
+                  style={{ backgroundColor: 'var(--accent-color, #1F2937)' }}
                 >
                   Done
                 </button>
@@ -267,7 +272,7 @@ export function InviteUserModal({ isOpen, onClose, onSuccess, tenants }: InviteU
 
               {/* Email field */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label htmlFor="email" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--foreground, #111827)' }}>
                   Email address
                 </label>
                 <input
@@ -279,7 +284,8 @@ export function InviteUserModal({ isOpen, onClose, onSuccess, tenants }: InviteU
                   required
                   autoComplete="email"
                   disabled={isSubmitting}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2.5 rounded-lg outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: 'var(--background-secondary, #F9FAFB)', color: 'var(--foreground, #111827)', border: '1px solid var(--border, #D1D5DB)' }}
                   placeholder="user@example.com"
                   aria-invalid={!!errors.email}
                   aria-describedby={errors.email ? 'email-error' : undefined}
@@ -293,7 +299,7 @@ export function InviteUserModal({ isOpen, onClose, onSuccess, tenants }: InviteU
 
               {/* Role field */}
               <div>
-                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label htmlFor="role" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--foreground, #111827)' }}>
                   Role
                 </label>
                 <select
@@ -303,7 +309,8 @@ export function InviteUserModal({ isOpen, onClose, onSuccess, tenants }: InviteU
                   onChange={handleInputChange}
                   required
                   disabled={isSubmitting}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-white"
+                  className="w-full px-4 py-2.5 rounded-lg outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: 'var(--background-secondary, #F9FAFB)', color: 'var(--foreground, #111827)', border: '1px solid var(--border, #D1D5DB)' }}
                   aria-invalid={!!errors.role}
                   aria-describedby={errors.role ? 'role-error' : 'role-description'}
                 >
@@ -319,7 +326,7 @@ export function InviteUserModal({ isOpen, onClose, onSuccess, tenants }: InviteU
                     {errors.role}
                   </p>
                 ) : formState.role ? (
-                  <p id="role-description" className="mt-1 text-sm text-gray-500">
+                  <p id="role-description" className="mt-1 text-sm" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                     {ROLE_OPTIONS.find((r) => r.value === formState.role)?.description}
                   </p>
                 ) : null}
@@ -328,7 +335,7 @@ export function InviteUserModal({ isOpen, onClose, onSuccess, tenants }: InviteU
               {/* Tenant field - only shown for tenant roles */}
               {requiresTenant && (
                 <div>
-                  <label htmlFor="tenantId" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label htmlFor="tenantId" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--foreground, #111827)' }}>
                     Tenant
                   </label>
                   <select
@@ -338,7 +345,8 @@ export function InviteUserModal({ isOpen, onClose, onSuccess, tenants }: InviteU
                     onChange={handleInputChange}
                     required
                     disabled={isSubmitting}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-white"
+                    className="w-full px-4 py-2.5 rounded-lg outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: 'var(--background-secondary, #F9FAFB)', color: 'var(--foreground, #111827)', border: '1px solid var(--border, #D1D5DB)' }}
                     aria-invalid={!!errors.tenantId}
                     aria-describedby={errors.tenantId ? 'tenantId-error' : undefined}
                   >
@@ -363,14 +371,16 @@ export function InviteUserModal({ isOpen, onClose, onSuccess, tenants }: InviteU
                   type="button"
                   onClick={handleClose}
                   disabled={isSubmitting}
-                  className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: 'var(--card-background, white)', color: 'var(--foreground, #374151)', border: '1px solid var(--border, #D1D5DB)' }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  style={{ backgroundColor: 'var(--accent-color, #1F2937)' }}
                 >
                   {isSubmitting ? (
                     <>
