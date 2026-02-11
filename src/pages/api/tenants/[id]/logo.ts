@@ -1,8 +1,9 @@
 /**
- * GET    /api/tenants/[id]/logo — Serve the tenant's logo image from database
- * POST   /api/tenants/[id]/logo — Upload a logo for the tenant
- * DELETE /api/tenants/[id]/logo — Remove the tenant's logo
+ * GET    /api/tenants/[id]/logo?variant=light|dark — Serve the tenant's logo image
+ * POST   /api/tenants/[id]/logo?variant=light|dark — Upload a logo for the tenant
+ * DELETE /api/tenants/[id]/logo?variant=light|dark — Remove the tenant's logo
  *
+ * variant defaults to "light" if omitted.
  * Image data is stored as base64 in the database to survive container rebuilds.
  */
 import type { APIRoute } from 'astro';
@@ -13,7 +14,8 @@ import { eq } from 'drizzle-orm';
 interface LogoResponse {
   success: true;
   data: {
-    tenantLogoUrl: string | null;
+    logoUrl: string | null;
+    variant: string;
   };
 }
 
@@ -22,9 +24,18 @@ const MAX_FILE_SIZE = 500 * 1024; // 500KB
 const MAX_WIDTH = 400;
 const MAX_HEIGHT = 150;
 
-/**
- * Validates agency admin authorization
- */
+function getVariant(url: URL): 'light' | 'dark' {
+  const v = url.searchParams.get('variant');
+  return v === 'dark' ? 'dark' : 'light';
+}
+
+function getColumns(variant: 'light' | 'dark') {
+  if (variant === 'dark') {
+    return { url: 'tenantLogoDarkUrl' as const, data: 'tenantLogoDarkData' as const, contentType: 'tenantLogoDarkContentType' as const };
+  }
+  return { url: 'tenantLogoUrl' as const, data: 'tenantLogoData' as const, contentType: 'tenantLogoContentType' as const };
+}
+
 async function validateAgencyAdmin(cookies: any): Promise<{ isAuthorized: boolean; userId?: string; errorResponse?: Response }> {
   const sessionToken = cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!sessionToken) {
@@ -61,37 +72,35 @@ async function validateAgencyAdmin(cookies: any): Promise<{ isAuthorized: boolea
   return { isAuthorized: true, userId: session.userId };
 }
 
-/**
- * GET /api/tenants/[id]/logo
- *
- * Serves the tenant's logo image from the database.
- */
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, url }) => {
   try {
     const tenantId = params.id;
     if (!tenantId) {
       return new Response('Not found', { status: 404 });
     }
 
+    const variant = getVariant(url);
+    const cols = getColumns(variant);
+
     const rows = await db
       .select({
-        tenantLogoData: tenantBranding.tenantLogoData,
-        tenantLogoContentType: tenantBranding.tenantLogoContentType,
+        data: tenantBranding[cols.data],
+        contentType: tenantBranding[cols.contentType],
       })
       .from(tenantBranding)
       .where(eq(tenantBranding.tenantId, tenantId))
       .limit(1);
 
-    if (rows.length === 0 || !rows[0].tenantLogoData || !rows[0].tenantLogoContentType) {
+    if (rows.length === 0 || !rows[0].data || !rows[0].contentType) {
       return new Response('Not found', { status: 404 });
     }
 
-    const buffer = Buffer.from(rows[0].tenantLogoData, 'base64');
+    const buffer = Buffer.from(rows[0].data, 'base64');
 
     return new Response(buffer, {
       status: 200,
       headers: {
-        'Content-Type': rows[0].tenantLogoContentType,
+        'Content-Type': rows[0].contentType,
         'Cache-Control': 'public, max-age=86400',
       },
     });
@@ -101,12 +110,7 @@ export const GET: APIRoute = async ({ params }) => {
   }
 };
 
-/**
- * POST /api/tenants/[id]/logo
- *
- * Uploads a logo for the tenant. Only accessible by agency admins.
- */
-export const POST: APIRoute = async ({ cookies, params, request }) => {
+export const POST: APIRoute = async ({ cookies, params, request, url }) => {
   try {
     const authResult = await validateAgencyAdmin(cookies);
     if (!authResult.isAuthorized) {
@@ -120,7 +124,6 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Check if tenant exists
     const existingTenant = await db
       .select({ id: tenants.id })
       .from(tenants)
@@ -133,7 +136,6 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Parse form data
     const formData = await request.formData();
     const file = formData.get('logo') as File | null;
 
@@ -143,25 +145,21 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Validate file type
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       return new Response(JSON.stringify({
         success: false, error: 'Invalid file type. Allowed types: PNG, JPG, SVG', code: 'INVALID_FILE_TYPE',
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       return new Response(JSON.stringify({
         success: false, error: 'File size exceeds maximum of 500KB', code: 'FILE_TOO_LARGE',
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Read file data
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // For PNG and JPEG, check dimensions (skip for SVG)
     if (file.type === 'image/png' || file.type === 'image/jpeg') {
       let width = 0;
       let height = 0;
@@ -190,10 +188,11 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       }
     }
 
+    const variant = getVariant(url);
+    const cols = getColumns(variant);
     const base64Data = buffer.toString('base64');
-    const logoUrl = `/api/tenants/${tenantId}/logo`;
+    const logoUrl = `/api/tenants/${tenantId}/logo${variant === 'dark' ? '?variant=dark' : ''}`;
 
-    // Update database
     const existingRecord = await db
       .select({ id: tenantBranding.id })
       .from(tenantBranding)
@@ -205,18 +204,18 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
         .insert(tenantBranding)
         .values({
           tenantId,
-          tenantLogoUrl: logoUrl,
-          tenantLogoData: base64Data,
-          tenantLogoContentType: file.type,
+          [cols.url]: logoUrl,
+          [cols.data]: base64Data,
+          [cols.contentType]: file.type,
           themeId: 'light',
         });
     } else {
       await db
         .update(tenantBranding)
         .set({
-          tenantLogoUrl: logoUrl,
-          tenantLogoData: base64Data,
-          tenantLogoContentType: file.type,
+          [cols.url]: logoUrl,
+          [cols.data]: base64Data,
+          [cols.contentType]: file.type,
           updatedAt: new Date(),
         })
         .where(eq(tenantBranding.tenantId, tenantId));
@@ -224,7 +223,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
 
     const response: LogoResponse = {
       success: true,
-      data: { tenantLogoUrl: logoUrl },
+      data: { logoUrl, variant },
     };
 
     return new Response(JSON.stringify(response), {
@@ -239,12 +238,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
   }
 };
 
-/**
- * DELETE /api/tenants/[id]/logo
- *
- * Removes the logo for the tenant. Only accessible by agency admins.
- */
-export const DELETE: APIRoute = async ({ cookies, params }) => {
+export const DELETE: APIRoute = async ({ cookies, params, url }) => {
   try {
     const authResult = await validateAgencyAdmin(cookies);
     if (!authResult.isAuthorized) {
@@ -258,7 +252,6 @@ export const DELETE: APIRoute = async ({ cookies, params }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Check if tenant exists
     const existingTenant = await db
       .select({ id: tenants.id })
       .from(tenants)
@@ -271,7 +264,9 @@ export const DELETE: APIRoute = async ({ cookies, params }) => {
       }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Update database
+    const variant = getVariant(url);
+    const cols = getColumns(variant);
+
     const existingBranding = await db
       .select({ id: tenantBranding.id })
       .from(tenantBranding)
@@ -282,9 +277,9 @@ export const DELETE: APIRoute = async ({ cookies, params }) => {
       await db
         .update(tenantBranding)
         .set({
-          tenantLogoUrl: null,
-          tenantLogoData: null,
-          tenantLogoContentType: null,
+          [cols.url]: null,
+          [cols.data]: null,
+          [cols.contentType]: null,
           updatedAt: new Date(),
         })
         .where(eq(tenantBranding.tenantId, tenantId));
@@ -292,7 +287,7 @@ export const DELETE: APIRoute = async ({ cookies, params }) => {
 
     const response: LogoResponse = {
       success: true,
-      data: { tenantLogoUrl: null },
+      data: { logoUrl: null, variant },
     };
 
     return new Response(JSON.stringify(response), {

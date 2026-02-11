@@ -23,6 +23,7 @@ interface Tenant {
   clienttetherAccessToken?: string | null;
   branding?: {
     tenantLogoUrl?: string | null;
+    tenantLogoDarkUrl?: string | null;
     themeId?: string | null;
   } | null;
 }
@@ -59,6 +60,7 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
     clienttetherAccessToken: tenant?.clienttetherAccessToken || '',
   });
   const [tenantLogoUrl, setTenantLogoUrl] = React.useState<string | null>(tenant?.branding?.tenantLogoUrl || null);
+  const [tenantLogoDarkUrl, setTenantLogoDarkUrl] = React.useState<string | null>(tenant?.branding?.tenantLogoDarkUrl || null);
   const [errors, setErrors] = React.useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -76,6 +78,7 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
         clienttetherAccessToken: tenant.clienttetherAccessToken || '',
       });
       setTenantLogoUrl(tenant.branding?.tenantLogoUrl || null);
+      setTenantLogoDarkUrl(tenant.branding?.tenantLogoDarkUrl || null);
     } else {
       setFormState({
         name: '',
@@ -86,6 +89,7 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
         clienttetherAccessToken: '',
       });
       setTenantLogoUrl(null);
+      setTenantLogoDarkUrl(null);
     }
     setErrors({});
   }, [tenant, isOpen]);
@@ -218,17 +222,25 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
       <div
         ref={modalRef}
         tabIndex={-1}
-        className="relative w-full max-w-md bg-white rounded-xl shadow-xl mx-4 max-h-[90vh] overflow-y-auto"
+        className="relative w-full max-w-lg rounded-xl shadow-xl mx-4 max-h-[90vh] overflow-y-auto"
+        style={{
+          backgroundColor: 'var(--card-background, white)',
+          color: 'var(--foreground, #111827)',
+        }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 id="tenant-modal-title" className="text-lg font-semibold text-gray-900">
+        <div
+          className="flex items-center justify-between p-6 border-b"
+          style={{ borderColor: 'var(--border, #E5E7EB)' }}
+        >
+          <h2 id="tenant-modal-title" className="text-lg font-semibold">
             {mode === 'create' ? 'Create Tenant' : 'Edit Tenant'}
           </h2>
           <button
             type="button"
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="transition-colors"
+            style={{ color: 'var(--foreground-muted, #6B7280)' }}
             aria-label="Close modal"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -253,7 +265,7 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
 
             {/* Name field */}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label htmlFor="name" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--foreground, #111827)' }}>
                 Tenant name
               </label>
               <input
@@ -264,7 +276,12 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
                 onChange={handleInputChange}
                 required
                 disabled={isSubmitting}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-2.5 rounded-lg outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  backgroundColor: 'var(--background-secondary, #F9FAFB)',
+                  color: 'var(--foreground, #111827)',
+                  border: '1px solid var(--border, #D1D5DB)',
+                }}
                 placeholder="Enter tenant name"
                 aria-invalid={!!errors.name}
                 aria-describedby={errors.name ? 'name-error' : undefined}
@@ -278,7 +295,7 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
 
             {/* Timezone field */}
             <div>
-              <label htmlFor="timezone" className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label htmlFor="timezone" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--foreground, #111827)' }}>
                 Timezone
               </label>
               <select
@@ -287,7 +304,12 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
                 value={formState.timezone}
                 onChange={handleInputChange}
                 disabled={isSubmitting}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-white"
+                className="w-full px-4 py-2.5 rounded-lg outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  backgroundColor: 'var(--background-secondary, #F9FAFB)',
+                  color: 'var(--foreground, #111827)',
+                  border: '1px solid var(--border, #D1D5DB)',
+                }}
               >
                 {TIMEZONE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -300,7 +322,7 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
             {/* Status field (only for edit mode) */}
             {mode === 'edit' && (
               <div>
-                <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label htmlFor="status" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--foreground, #111827)' }}>
                   Status
                 </label>
                 <select
@@ -309,13 +331,18 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
                   value={formState.status}
                   onChange={handleInputChange}
                   disabled={isSubmitting}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-white"
+                  className="w-full px-4 py-2.5 rounded-lg outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: 'var(--background-secondary, #F9FAFB)',
+                    color: 'var(--foreground, #111827)',
+                    border: '1px solid var(--border, #D1D5DB)',
+                  }}
                 >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                   <option value="suspended">Suspended</option>
                 </select>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                   Note: Changing status to inactive will log out all tenant users.
                 </p>
               </div>
@@ -324,16 +351,16 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
             {/* ClientTether API fields (only for edit mode) */}
             {mode === 'edit' && (
               <>
-                <div className="border-t border-gray-200 pt-5">
-                  <h3 className="text-sm font-medium text-gray-900 mb-3">ClientTether Integration</h3>
-                  <p className="text-xs text-gray-500 mb-4">
+                <div className="border-t pt-5" style={{ borderColor: 'var(--border, #E5E7EB)' }}>
+                  <h3 className="text-sm font-medium mb-3">ClientTether Integration</h3>
+                  <p className="text-xs mb-4" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                     API credentials from the ClientTether Settings &gt; API page. Both fields are required for data sync.
                   </p>
                 </div>
 
                 {/* Access Token */}
                 <div>
-                  <label htmlFor="clienttetherAccessToken" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label htmlFor="clienttetherAccessToken" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--foreground, #111827)' }}>
                     Access Token
                   </label>
                   <input
@@ -343,18 +370,23 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
                     value={formState.clienttetherAccessToken}
                     onChange={handleInputChange}
                     disabled={isSubmitting}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm"
+                    style={{
+                      backgroundColor: 'var(--background-secondary, #F9FAFB)',
+                      color: 'var(--foreground, #111827)',
+                      border: '1px solid var(--border, #D1D5DB)',
+                    }}
                     placeholder="X-Access-Token value"
                     autoComplete="off"
                   />
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                     The X-Access-Token header value from ClientTether API settings
                   </p>
                 </div>
 
                 {/* Web Key */}
                 <div>
-                  <label htmlFor="clienttetherWebKey" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label htmlFor="clienttetherWebKey" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--foreground, #111827)' }}>
                     Web Key
                   </label>
                   <input
@@ -364,11 +396,16 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
                     value={formState.clienttetherWebKey}
                     onChange={handleInputChange}
                     disabled={isSubmitting}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm"
+                    style={{
+                      backgroundColor: 'var(--background-secondary, #F9FAFB)',
+                      color: 'var(--foreground, #111827)',
+                      border: '1px solid var(--border, #D1D5DB)',
+                    }}
                     placeholder="X-Web-Key value (e.g., CT_...)"
                     autoComplete="off"
                   />
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
                     The X-Web-Key header value from ClientTether API settings
                   </p>
                 </div>
@@ -378,34 +415,45 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
             {/* Branding section (only for edit mode) */}
             {mode === 'edit' && tenant && (
               <>
-                <div className="border-t border-gray-200 pt-5">
-                  <h3 className="text-sm font-medium text-gray-900 mb-3">Branding</h3>
-                  <p className="text-xs text-gray-500 mb-4">
-                    Upload a logo and choose a theme. For advanced branding options, visit the Branding settings page.
+                <div className="border-t pt-5" style={{ borderColor: 'var(--border, #E5E7EB)' }}>
+                  <h3 className="text-sm font-medium mb-3">Branding</h3>
+                  <p className="text-xs mb-4" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
+                    Upload logos for light and dark themes. PNG, JPG, or SVG. Max 500KB.
                   </p>
                 </div>
 
-                {/* Logo Upload */}
-                <LogoUpload
-                  tenantId={tenant.id}
-                  currentLogoUrl={tenantLogoUrl}
-                  onLogoChange={setTenantLogoUrl}
-                />
+                {/* Logo Uploads - Light and Dark side by side */}
+                <div className="grid grid-cols-2 gap-4">
+                  <LogoUpload
+                    tenantId={tenant.id}
+                    currentLogoUrl={tenantLogoUrl}
+                    onLogoChange={setTenantLogoUrl}
+                    variant="light"
+                    label="Light Mode Logo"
+                  />
+                  <LogoUpload
+                    tenantId={tenant.id}
+                    currentLogoUrl={tenantLogoDarkUrl}
+                    onLogoChange={setTenantLogoDarkUrl}
+                    variant="dark"
+                    label="Dark Mode Logo"
+                  />
+                </div>
 
                 {/* Light/Dark Theme Toggle */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground, #111827)' }}>
                     Theme
                   </label>
-                  <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden">
+                  <div className="inline-flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--border, #D1D5DB)' }}>
                     <button
                       type="button"
                       onClick={() => setFormState((prev) => ({ ...prev, themeId: 'light' }))}
-                      className={`px-4 py-2 text-sm font-medium transition-colors ${
-                        formState.themeId === 'light'
-                          ? 'bg-gray-900 text-white'
-                          : 'bg-white text-gray-700 hover:bg-gray-50'
-                      }`}
+                      className="px-4 py-2 text-sm font-medium transition-colors"
+                      style={{
+                        backgroundColor: formState.themeId === 'light' ? 'var(--accent-color, #1F2937)' : 'var(--card-background, white)',
+                        color: formState.themeId === 'light' ? 'white' : 'var(--foreground, #374151)',
+                      }}
                     >
                       <span className="flex items-center gap-1.5">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -417,11 +465,12 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
                     <button
                       type="button"
                       onClick={() => setFormState((prev) => ({ ...prev, themeId: 'dark' }))}
-                      className={`px-4 py-2 text-sm font-medium transition-colors border-l border-gray-300 ${
-                        formState.themeId === 'dark'
-                          ? 'bg-gray-900 text-white'
-                          : 'bg-white text-gray-700 hover:bg-gray-50'
-                      }`}
+                      className="px-4 py-2 text-sm font-medium transition-colors"
+                      style={{
+                        backgroundColor: formState.themeId === 'dark' ? 'var(--accent-color, #1F2937)' : 'var(--card-background, white)',
+                        color: formState.themeId === 'dark' ? 'white' : 'var(--foreground, #374151)',
+                        borderLeft: '1px solid var(--border, #D1D5DB)',
+                      }}
                     >
                       <span className="flex items-center gap-1.5">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -441,14 +490,20 @@ export function TenantModal({ isOpen, onClose, onSuccess, mode, tenant }: Tenant
                 type="button"
                 onClick={handleClose}
                 disabled={isSubmitting}
-                className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  backgroundColor: 'var(--card-background, white)',
+                  color: 'var(--foreground, #374151)',
+                  border: '1px solid var(--border, #D1D5DB)',
+                }}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                style={{ backgroundColor: 'var(--accent-color, #1F2937)' }}
               >
                 {isSubmitting ? (
                   <>

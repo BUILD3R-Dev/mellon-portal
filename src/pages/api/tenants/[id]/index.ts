@@ -18,6 +18,7 @@ interface TenantData {
     themeId: string;
     accentColorOverride: string | null;
     tenantLogoUrl: string | null;
+    tenantLogoDarkUrl: string | null;
     mellonLogoUrl: string | null;
     primaryColor: string | null;
     accentColor: string | null;
@@ -139,6 +140,7 @@ export const GET: APIRoute = async ({ cookies, params }) => {
         themeId: tenantBranding.themeId,
         accentColorOverride: tenantBranding.accentColorOverride,
         tenantLogoUrl: tenantBranding.tenantLogoUrl,
+        tenantLogoDarkUrl: tenantBranding.tenantLogoDarkUrl,
         mellonLogoUrl: tenantBranding.mellonLogoUrl,
         primaryColor: tenantBranding.primaryColor,
         accentColor: tenantBranding.accentColor,
@@ -185,6 +187,7 @@ export const GET: APIRoute = async ({ cookies, params }) => {
             themeId: tenant.themeId || 'light',
             accentColorOverride: tenant.accentColorOverride,
             tenantLogoUrl: tenant.tenantLogoUrl,
+            tenantLogoDarkUrl: tenant.tenantLogoDarkUrl,
             mellonLogoUrl: tenant.mellonLogoUrl,
             primaryColor: tenant.primaryColor,
             accentColor: tenant.accentColor,
@@ -441,6 +444,7 @@ export const PATCH: APIRoute = async ({ cookies, params, request }) => {
         themeId: tenantBranding.themeId,
         accentColorOverride: tenantBranding.accentColorOverride,
         tenantLogoUrl: tenantBranding.tenantLogoUrl,
+        tenantLogoDarkUrl: tenantBranding.tenantLogoDarkUrl,
         mellonLogoUrl: tenantBranding.mellonLogoUrl,
         primaryColor: tenantBranding.primaryColor,
         accentColor: tenantBranding.accentColor,
@@ -465,6 +469,7 @@ export const PATCH: APIRoute = async ({ cookies, params, request }) => {
             themeId: brandingResult[0].themeId || 'light',
             accentColorOverride: brandingResult[0].accentColorOverride,
             tenantLogoUrl: brandingResult[0].tenantLogoUrl,
+            tenantLogoDarkUrl: brandingResult[0].tenantLogoDarkUrl,
             mellonLogoUrl: brandingResult[0].mellonLogoUrl,
             primaryColor: brandingResult[0].primaryColor,
             accentColor: brandingResult[0].accentColor,

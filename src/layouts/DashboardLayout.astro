@@ -137,6 +137,7 @@ if (tenantId) {
     const brandingResult = await db
       .select({
         tenantLogoUrl: tenantBranding.tenantLogoUrl,
+        tenantLogoDarkUrl: tenantBranding.tenantLogoDarkUrl,
         themeId: tenantBranding.themeId,
         accentColorOverride: tenantBranding.accentColorOverride,
       })
@@ -159,10 +160,13 @@ if (tenantId) {
   cssVariables = generateCSSRootBlock(portalBrandingData.adminThemeId || 'light');
 }
 
-// Determine header logo based on context
+// Determine header logo based on context and theme
 let headerLogoUrl: string | null = null;
 if (tenantId) {
-  headerLogoUrl = tenantBrandingData?.tenantLogoUrl || null;
+  const isDarkTenant = tenantBrandingData?.themeId === 'dark';
+  headerLogoUrl = isDarkTenant
+    ? (tenantBrandingData?.tenantLogoDarkUrl || tenantBrandingData?.tenantLogoUrl || null)
+    : (tenantBrandingData?.tenantLogoUrl || null);
 } else if (portalBrandingData) {
   const isDark = portalBrandingData.adminThemeId === 'dark';
   headerLogoUrl = isDark
