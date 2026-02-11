@@ -188,7 +188,6 @@ if (portalBrandingData) {
 // Determine favicon
 const faviconUrl = (!tenantId && portalBrandingData?.faviconUrl) || '/favicon.svg';
 
-const tenantLogoUrl = tenantBrandingData?.tenantLogoUrl;
 const inTenantContext = !!tenantId;
 ---
 
@@ -208,10 +207,10 @@ const inTenantContext = !!tenantId;
       <div class="container mx-auto flex h-16 items-center justify-between px-4">
         <div class="flex items-center gap-4">
           <!-- Tenant logo, header logo, tenant name, or Mellon Portal fallback -->
-          {(tenantLogoUrl || headerLogoUrl) ? (
+          {headerLogoUrl ? (
             <a href="/dashboard" class="flex items-center hover:opacity-80 transition-opacity">
               <img
-                src={tenantLogoUrl || headerLogoUrl}
+                src={headerLogoUrl}
                 alt={tenantName ? `${tenantName} logo` : 'Portal logo'}
                 class="h-8 md:h-10 max-w-[160px] object-contain"
               />
