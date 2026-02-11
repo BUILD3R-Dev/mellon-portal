@@ -137,6 +137,7 @@ if (tenantId) {
 }
 
 const tenantLogoUrl = tenantBrandingData?.tenantLogoUrl;
+const inTenantContext = !!tenantId;
 ---
 
 <!doctype html>
@@ -154,42 +155,39 @@ const tenantLogoUrl = tenantBrandingData?.tenantLogoUrl;
     <header class="sticky top-0 z-50 w-full border-b backdrop-blur supports-[backdrop-filter]:bg-white/60" style="background-color: var(--background-secondary, #FFFFFF); border-color: var(--border, #E5E7EB);">
       <div class="container mx-auto flex h-16 items-center justify-between px-4">
         <div class="flex items-center gap-4">
-          <!-- Tenant logo or Mellon Portal text -->
+          <!-- Tenant logo, tenant name, or Mellon Portal fallback -->
           {tenantLogoUrl ? (
-            <a href="/dashboard" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <a href="/dashboard" class="flex items-center hover:opacity-80 transition-opacity">
               <img
                 src={tenantLogoUrl}
                 alt={tenantName ? `${tenantName} logo` : 'Tenant logo'}
                 class="h-8 md:h-10 max-w-[160px] object-contain"
               />
-              <span class="hidden lg:inline-flex h-6 w-px bg-gray-200"></span>
-              <span class="hidden lg:inline text-sm font-medium" style="color: var(--foreground-muted, #6B7280);">
-                Mellon Portal
-              </span>
+            </a>
+          ) : tenantName ? (
+            <a href="/dashboard" class="text-xl font-semibold transition-colors" style="color: var(--foreground, #111827);">
+              {tenantName}
             </a>
           ) : (
             <a href="/dashboard" class="text-xl font-semibold transition-colors" style="color: var(--foreground, #111827);">
               Mellon Portal
             </a>
           )}
-          {tenantName && !tenantLogoUrl && (
-            <span class="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: var(--border-muted, #F3F4F6); color: var(--foreground, #111827);">
-              {tenantName}
-            </span>
-          )}
         </div>
 
         <nav class="hidden md:flex items-center gap-6">
-          <a href="/dashboard" class={getNavLinkClasses('/dashboard')} style={getNavLinkStyle('/dashboard')}>Dashboard</a>
-          <a href="/reports" class={getNavLinkClasses('/reports')} style={getNavLinkStyle('/reports')}>Reports</a>
-          <a href="/leads" class={getNavLinkClasses('/leads')} style={getNavLinkStyle('/leads')}>Leads</a>
-          <a href="/pipeline" class={getNavLinkClasses('/pipeline')} style={getNavLinkStyle('/pipeline')}>Pipeline</a>
-          <a href="/hot-list" class={getNavLinkClasses('/hot-list')} style={getNavLinkStyle('/hot-list')}>Hot List</a>
-          <a href="/notes" class={getNavLinkClasses('/notes')} style={getNavLinkStyle('/notes')}>Notes</a>
-          <a href="/schedule" class={getNavLinkClasses('/schedule')} style={getNavLinkStyle('/schedule')}>Schedule</a>
-          {isAgencyAdmin && (
+          {inTenantContext ? (
             <>
-              <span class="h-4 w-px" style="background-color: var(--border, #E5E7EB);"></span>
+              <a href="/dashboard" class={getNavLinkClasses('/dashboard')} style={getNavLinkStyle('/dashboard')}>Dashboard</a>
+              <a href="/reports" class={getNavLinkClasses('/reports')} style={getNavLinkStyle('/reports')}>Reports</a>
+              <a href="/leads" class={getNavLinkClasses('/leads')} style={getNavLinkStyle('/leads')}>Leads</a>
+              <a href="/pipeline" class={getNavLinkClasses('/pipeline')} style={getNavLinkStyle('/pipeline')}>Pipeline</a>
+              <a href="/hot-list" class={getNavLinkClasses('/hot-list')} style={getNavLinkStyle('/hot-list')}>Hot List</a>
+              <a href="/notes" class={getNavLinkClasses('/notes')} style={getNavLinkStyle('/notes')}>Notes</a>
+              <a href="/schedule" class={getNavLinkClasses('/schedule')} style={getNavLinkStyle('/schedule')}>Schedule</a>
+            </>
+          ) : (
+            <>
               <a href="/admin/tenants" class={getNavLinkClasses('/admin/tenants')} style={getNavLinkStyle('/admin/tenants')}>Tenants</a>
               <a href="/admin/users" class={getNavLinkClasses('/admin/users')} style={getNavLinkStyle('/admin/users')}>Users</a>
               <a href="/admin/dashboard" class={getNavLinkClasses('/admin/dashboard')} style={getNavLinkStyle('/admin/dashboard')}>Admin</a>
@@ -328,23 +326,25 @@ const tenantLogoUrl = tenantBrandingData?.tenantLogoUrl;
       <!-- Mobile navigation menu -->
       <div id="mobile-menu" class="hidden md:hidden border-t" style="border-color: var(--border, #E5E7EB);">
         <div class="px-4 py-3 space-y-1">
-          <a href="/dashboard" class={getNavLinkClasses('/dashboard', true)} style={getNavLinkStyle('/dashboard', true)}>Dashboard</a>
-          <a href="/reports" class={getNavLinkClasses('/reports', true)} style={getNavLinkStyle('/reports', true)}>Reports</a>
-          <a href="/leads" class={getNavLinkClasses('/leads', true)} style={getNavLinkStyle('/leads', true)}>Leads</a>
-          <a href="/pipeline" class={getNavLinkClasses('/pipeline', true)} style={getNavLinkStyle('/pipeline', true)}>Pipeline</a>
-          <a href="/hot-list" class={getNavLinkClasses('/hot-list', true)} style={getNavLinkStyle('/hot-list', true)}>Hot List</a>
-          <a href="/notes" class={getNavLinkClasses('/notes', true)} style={getNavLinkStyle('/notes', true)}>Notes</a>
-          <a href="/schedule" class={getNavLinkClasses('/schedule', true)} style={getNavLinkStyle('/schedule', true)}>Schedule</a>
-          <div class="my-2 border-t" style="border-color: var(--border, #E5E7EB);"></div>
-          <a href="/profile" class={getNavLinkClasses('/profile', true)} style={getNavLinkStyle('/profile', true)}>Profile</a>
-          {isAgencyAdmin && (
+          {inTenantContext ? (
             <>
-              <div class="my-2 border-t" style="border-color: var(--border, #E5E7EB);"></div>
+              <a href="/dashboard" class={getNavLinkClasses('/dashboard', true)} style={getNavLinkStyle('/dashboard', true)}>Dashboard</a>
+              <a href="/reports" class={getNavLinkClasses('/reports', true)} style={getNavLinkStyle('/reports', true)}>Reports</a>
+              <a href="/leads" class={getNavLinkClasses('/leads', true)} style={getNavLinkStyle('/leads', true)}>Leads</a>
+              <a href="/pipeline" class={getNavLinkClasses('/pipeline', true)} style={getNavLinkStyle('/pipeline', true)}>Pipeline</a>
+              <a href="/hot-list" class={getNavLinkClasses('/hot-list', true)} style={getNavLinkStyle('/hot-list', true)}>Hot List</a>
+              <a href="/notes" class={getNavLinkClasses('/notes', true)} style={getNavLinkStyle('/notes', true)}>Notes</a>
+              <a href="/schedule" class={getNavLinkClasses('/schedule', true)} style={getNavLinkStyle('/schedule', true)}>Schedule</a>
+            </>
+          ) : (
+            <>
               <a href="/admin/tenants" class={getNavLinkClasses('/admin/tenants', true)} style={getNavLinkStyle('/admin/tenants', true)}>Tenants</a>
               <a href="/admin/users" class={getNavLinkClasses('/admin/users', true)} style={getNavLinkStyle('/admin/users', true)}>Users</a>
               <a href="/admin/dashboard" class={getNavLinkClasses('/admin/dashboard', true)} style={getNavLinkStyle('/admin/dashboard', true)}>Admin</a>
             </>
           )}
+          <div class="my-2 border-t" style="border-color: var(--border, #E5E7EB);"></div>
+          <a href="/profile" class={getNavLinkClasses('/profile', true)} style={getNavLinkStyle('/profile', true)}>Profile</a>
         </div>
       </div>
     </header>
