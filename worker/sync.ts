@@ -444,6 +444,9 @@ async function normalizeNotes(
         author: note.author,
         content: note.content,
         rawJson: note,
+        source: 'clienttether',
+        authorUserId: null,
+        authorUserName: null,
       });
       recordsUpdated++;
     }

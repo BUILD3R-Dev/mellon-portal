@@ -96,6 +96,9 @@ export function TenantDetail({ tenant: initialTenant, users }: TenantDetailProps
   const [statusChangeTenant, setStatusChangeTenant] = React.useState<{ newStatus: 'active' | 'inactive' | 'suspended' } | null>(null);
   const [isChangingStatus, setIsChangingStatus] = React.useState(false);
   const [notification, setNotification] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [showNoteForm, setShowNoteForm] = React.useState(false);
+  const [noteContent, setNoteContent] = React.useState('');
+  const [submittingNote, setSubmittingNote] = React.useState(false);
 
   // Auto-hide notification after 5 seconds
   React.useEffect(() => {
@@ -200,6 +203,45 @@ export function TenantDetail({ tenant: initialTenant, users }: TenantDetailProps
     } finally {
       setIsChangingStatus(false);
       setStatusChangeTenant(null);
+    }
+  };
+
+  const handleAddNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!noteContent.trim() || submittingNote) return;
+
+    setSubmittingNote(true);
+    try {
+      const response = await fetch(`/api/tenants/${tenant.id}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: noteContent.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setNotification({
+          type: 'error',
+          message: data.error || 'Failed to add note',
+        });
+        return;
+      }
+
+      setNoteContent('');
+      setShowNoteForm(false);
+      setNotification({
+        type: 'success',
+        message: 'Note added successfully',
+      });
+    } catch (error) {
+      console.error('Add note error:', error);
+      setNotification({
+        type: 'error',
+        message: 'Failed to add note. Please try again.',
+      });
+    } finally {
+      setSubmittingNote(false);
     }
   };
 
@@ -389,6 +431,58 @@ export function TenantDetail({ tenant: initialTenant, users }: TenantDetailProps
               </tbody>
             </table>
           </div>
+        )}
+      </div>
+
+      {/* Add Note Section */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Notes</h2>
+          {!showNoteForm && (
+            <button
+              type="button"
+              onClick={() => setShowNoteForm(true)}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Note
+            </button>
+          )}
+        </div>
+        {showNoteForm ? (
+          <form onSubmit={handleAddNote}>
+            <textarea
+              value={noteContent}
+              onChange={(e) => setNoteContent(e.target.value)}
+              placeholder="Write a note for this tenant..."
+              rows={4}
+              maxLength={10000}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-y text-sm"
+            />
+            <div className="flex items-center justify-between mt-3">
+              <span className="text-xs text-gray-400">{noteContent.length.toLocaleString()} / 10,000</span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowNoteForm(false); setNoteContent(''); }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingNote || !noteContent.trim()}
+                  className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submittingNote ? 'Saving...' : 'Save Note'}
+                </button>
+              </div>
+            </div>
+          </form>
+        ) : (
+          <p className="text-sm text-gray-500">Add internal notes visible on this tenant's notes page.</p>
         )}
       </div>
 

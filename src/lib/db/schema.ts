@@ -197,6 +197,9 @@ export const ctNotes = pgTable('ct_notes', {
   author: varchar('author', { length: 255 }),
   content: text('content'),
   rawJson: jsonb('raw_json'),
+  source: varchar('source', { length: 50 }).notNull().default('manual'),
+  authorUserId: uuid('author_user_id').references(() => users.id, { onDelete: 'set null' }),
+  authorUserName: varchar('author_user_name', { length: 255 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => [
   index('ct_notes_tenant_id_idx').on(table.tenantId),

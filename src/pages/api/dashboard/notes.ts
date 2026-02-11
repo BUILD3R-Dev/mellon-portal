@@ -1,20 +1,26 @@
 /**
  * GET /api/dashboard/notes
+ * POST /api/dashboard/notes
  *
- * Returns paginated notes for the authenticated tenant user.
- * Supports query params: limit (default 50), offset, search
+ * GET: Returns paginated notes for the authenticated tenant user.
+ * Supports query params: limit (default 50), offset, search, timeWindow
  * Orders by note_date descending (most recent first).
+ *
+ * POST: Creates a new manual note for the authenticated tenant user.
+ * Accepts { content: string } body.
  */
 import type { APIRoute } from 'astro';
 import { validateSession, SESSION_COOKIE_NAME, getUserMemberships, TENANT_COOKIE_NAME } from '@/lib/auth';
-import { db, ctNotes } from '@/lib/db';
-import { eq, desc, and, or, ilike } from 'drizzle-orm';
+import { db, ctNotes, users } from '@/lib/db';
+import { eq, desc, and, or, ilike, gte } from 'drizzle-orm';
 
 interface NoteData {
   id: string;
   contactId: string | null;
   noteDate: string;
   author: string | null;
+  authorUserName: string | null;
+  source: string;
   content: string | null;
   createdAt: string;
 }
@@ -31,82 +37,111 @@ interface NotesListResponse {
 interface NotesErrorResponse {
   success: false;
   error: string;
-  code: 'UNAUTHORIZED' | 'FORBIDDEN' | 'INTERNAL_ERROR';
+  code: string;
 }
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
+const MAX_CONTENT_LENGTH = 10000;
 
-export const GET: APIRoute = async ({ cookies, url }) => {
-  try {
-    // Validate session
-    const sessionToken = cookies.get(SESSION_COOKIE_NAME)?.value;
-    if (!sessionToken) {
-      const response: NotesErrorResponse = {
+/**
+ * Validates session and tenant access. Returns auth context or error response.
+ */
+async function validateTenantAccess(cookies: any): Promise<{
+  authorized: boolean;
+  userId?: string;
+  tenantId?: string;
+  errorResponse?: Response;
+}> {
+  const sessionToken = cookies.get(SESSION_COOKIE_NAME)?.value;
+  if (!sessionToken) {
+    return {
+      authorized: false,
+      errorResponse: new Response(JSON.stringify({
         success: false,
         error: 'Authentication required',
         code: 'UNAUTHORIZED',
-      };
-      return new Response(JSON.stringify(response), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } }),
+    };
+  }
 
-    const session = await validateSession(sessionToken);
-    if (!session) {
-      const response: NotesErrorResponse = {
+  const session = await validateSession(sessionToken);
+  if (!session) {
+    return {
+      authorized: false,
+      errorResponse: new Response(JSON.stringify({
         success: false,
         error: 'Invalid or expired session',
         code: 'UNAUTHORIZED',
-      };
-      return new Response(JSON.stringify(response), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } }),
+    };
+  }
 
-    // Get user memberships to determine tenant access
-    const memberships = await getUserMemberships(session.userId);
+  const memberships = await getUserMemberships(session.userId);
+  const isAgencyAdmin = memberships.some((m) => m.role === 'agency_admin' && m.tenantId === null);
+  const tenantId = cookies.get(TENANT_COOKIE_NAME)?.value;
 
-    // Check if user is agency admin (they need a specific tenant context)
-    const isAgencyAdmin = memberships.some((m) => m.role === 'agency_admin' && m.tenantId === null);
-
-    // Get tenant context from cookie
-    const tenantId = cookies.get(TENANT_COOKIE_NAME)?.value;
-
-    // If no tenant context set, user cannot view notes
-    if (!tenantId) {
-      const response: NotesErrorResponse = {
+  if (!tenantId) {
+    return {
+      authorized: false,
+      errorResponse: new Response(JSON.stringify({
         success: false,
         error: 'No tenant context selected',
         code: 'FORBIDDEN',
-      };
-      return new Response(JSON.stringify(response), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } }),
+    };
+  }
 
-    // Verify user has access to this tenant (either agency admin or member)
-    const hasTenantAccess = isAgencyAdmin || memberships.some((m) => m.tenantId === tenantId);
-
-    if (!hasTenantAccess) {
-      const response: NotesErrorResponse = {
+  const hasTenantAccess = isAgencyAdmin || memberships.some((m) => m.tenantId === tenantId);
+  if (!hasTenantAccess) {
+    return {
+      authorized: false,
+      errorResponse: new Response(JSON.stringify({
         success: false,
         error: 'Access denied',
         code: 'FORBIDDEN',
-      };
-      return new Response(JSON.stringify(response), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } }),
+    };
+  }
+
+  return { authorized: true, userId: session.userId, tenantId };
+}
+
+/**
+ * Computes the start date for a given time window.
+ */
+function getTimeWindowStart(timeWindow: string): Date | null {
+  const now = new Date();
+
+  if (timeWindow === 'rolling-7') {
+    const start = new Date(now);
+    start.setDate(now.getDate() - 7);
+    start.setHours(0, 0, 0, 0);
+    return start;
+  }
+
+  if (timeWindow === 'report-week') {
+    const dayOfWeek = now.getDay();
+    const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - mondayOffset);
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+  }
+
+  return null;
+}
+
+export const GET: APIRoute = async ({ cookies, url }) => {
+  try {
+    const auth = await validateTenantAccess(cookies);
+    if (!auth.authorized) return auth.errorResponse!;
 
     // Parse query params
     const limitParam = url.searchParams.get('limit');
     const offsetParam = url.searchParams.get('offset');
     const searchParam = url.searchParams.get('search');
+    const timeWindowParam = url.searchParams.get('timeWindow');
 
     let limit = DEFAULT_LIMIT;
     if (limitParam) {
@@ -125,7 +160,15 @@ export const GET: APIRoute = async ({ cookies, url }) => {
     }
 
     // Build query conditions
-    const conditions = [eq(ctNotes.tenantId, tenantId)];
+    const conditions = [eq(ctNotes.tenantId, auth.tenantId!)];
+
+    // Add time window filter
+    if (timeWindowParam) {
+      const startDate = getTimeWindowStart(timeWindowParam);
+      if (startDate) {
+        conditions.push(gte(ctNotes.noteDate, startDate));
+      }
+    }
 
     // Add search filter if provided
     if (searchParam && searchParam.trim()) {
@@ -133,7 +176,8 @@ export const GET: APIRoute = async ({ cookies, url }) => {
       conditions.push(
         or(
           ilike(ctNotes.content, searchTerm),
-          ilike(ctNotes.author, searchTerm)
+          ilike(ctNotes.author, searchTerm),
+          ilike(ctNotes.authorUserName, searchTerm)
         )!
       );
     }
@@ -153,6 +197,8 @@ export const GET: APIRoute = async ({ cookies, url }) => {
       contactId: note.contactId,
       noteDate: note.noteDate.toISOString(),
       author: note.author,
+      authorUserName: note.authorUserName,
+      source: note.source,
       content: note.content,
       createdAt: note.createdAt.toISOString(),
     }));
@@ -181,5 +227,74 @@ export const GET: APIRoute = async ({ cookies, url }) => {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
+  }
+};
+
+export const POST: APIRoute = async ({ cookies, request }) => {
+  try {
+    const auth = await validateTenantAccess(cookies);
+    if (!auth.authorized) return auth.errorResponse!;
+
+    const body = await request.json();
+    const { content } = body;
+
+    if (!content || typeof content !== 'string' || !content.trim()) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Content is required',
+        code: 'VALIDATION_ERROR',
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    if (content.length > MAX_CONTENT_LENGTH) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: `Content must be ${MAX_CONTENT_LENGTH} characters or fewer`,
+        code: 'VALIDATION_ERROR',
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Look up current user's name
+    const [user] = await db
+      .select({ name: users.name })
+      .from(users)
+      .where(eq(users.id, auth.userId!))
+      .limit(1);
+
+    const authorUserName = user?.name || null;
+
+    // Insert the note
+    const [createdNote] = await db
+      .insert(ctNotes)
+      .values({
+        tenantId: auth.tenantId!,
+        noteDate: new Date(),
+        content: content.trim(),
+        source: 'manual',
+        authorUserId: auth.userId!,
+        authorUserName,
+      })
+      .returning();
+
+    return new Response(JSON.stringify({
+      success: true,
+      data: {
+        id: createdNote.id,
+        contactId: createdNote.contactId,
+        noteDate: createdNote.noteDate.toISOString(),
+        author: createdNote.author,
+        authorUserName: createdNote.authorUserName,
+        source: createdNote.source,
+        content: createdNote.content,
+        createdAt: createdNote.createdAt.toISOString(),
+      },
+    }), { status: 201, headers: { 'Content-Type': 'application/json' } });
+  } catch (error) {
+    console.error('Error creating note:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'An unexpected error occurred',
+      code: 'INTERNAL_ERROR',
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
