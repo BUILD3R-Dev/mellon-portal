@@ -25,6 +25,15 @@ export interface LeadsChartProps {
 }
 
 /**
+ * Reads a CSS variable from :root, with fallback
+ */
+function getCSSVar(name: string, fallback: string): string {
+  if (typeof window === 'undefined') return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
+/**
  * LeadsChart renders a bar chart showing leads by source.
  */
 export function LeadsChart({
@@ -33,6 +42,11 @@ export function LeadsChart({
   height = 300,
   className,
 }: LeadsChartProps) {
+  const foreground = getCSSVar('--foreground', '#111827');
+  const foregroundMuted = getCSSVar('--foreground-muted', '#6B7280');
+  const borderColor = getCSSVar('--border', '#E5E7EB');
+  const borderMuted = getCSSVar('--border-muted', '#F3F4F6');
+
   const option = {
     title: {
       text: title,
@@ -40,7 +54,7 @@ export function LeadsChart({
       textStyle: {
         fontSize: 16,
         fontWeight: 600,
-        color: '#111827',
+        color: foreground,
       },
     },
     tooltip: {
@@ -61,22 +75,22 @@ export function LeadsChart({
       data: data.map((d) => d.source),
       axisLabel: {
         rotate: data.length > 5 ? 45 : 0,
-        color: '#6B7280',
+        color: foregroundMuted,
       },
       axisLine: {
         lineStyle: {
-          color: '#E5E7EB',
+          color: borderColor,
         },
       },
     },
     yAxis: {
       type: 'value',
       axisLabel: {
-        color: '#6B7280',
+        color: foregroundMuted,
       },
       splitLine: {
         lineStyle: {
-          color: '#F3F4F6',
+          color: borderMuted,
         },
       },
     },
@@ -95,7 +109,13 @@ export function LeadsChart({
   };
 
   return (
-    <div className={cn('bg-white rounded-xl border border-gray-200 p-6', className)}>
+    <div
+      className={cn('rounded-xl border p-6', className)}
+      style={{
+        backgroundColor: 'var(--card-background, #FFFFFF)',
+        borderColor: 'var(--card-border, #E5E7EB)',
+      }}
+    >
       <ReactECharts
         option={option}
         style={{ height: `${height}px`, width: '100%' }}

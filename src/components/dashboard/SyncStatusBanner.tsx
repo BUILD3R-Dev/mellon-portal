@@ -88,12 +88,16 @@ export function SyncStatusBanner({ className }: SyncStatusBannerProps) {
     return (
       <div
         className={cn(
-          'rounded-lg px-4 py-3 flex items-center gap-3 bg-gray-50 border border-gray-200',
+          'rounded-lg px-4 py-3 flex items-center gap-3 border',
           className
         )}
+        style={{
+          backgroundColor: 'var(--background-secondary, #F9FAFB)',
+          borderColor: 'var(--border, #E5E7EB)',
+        }}
       >
-        <div className="w-2 h-2 bg-gray-300 rounded-full animate-pulse" />
-        <p className="text-sm text-gray-600">Loading sync status...</p>
+        <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--border, #E5E7EB)' }} />
+        <p className="text-sm" style={{ color: 'var(--foreground-muted, #6B7280)' }}>Loading sync status...</p>
       </div>
     );
   }
@@ -102,12 +106,16 @@ export function SyncStatusBanner({ className }: SyncStatusBannerProps) {
     return (
       <div
         className={cn(
-          'rounded-lg px-4 py-3 flex items-center gap-3 bg-gray-50 border border-gray-200',
+          'rounded-lg px-4 py-3 flex items-center gap-3 border',
           className
         )}
+        style={{
+          backgroundColor: 'var(--background-secondary, #F9FAFB)',
+          borderColor: 'var(--border, #E5E7EB)',
+        }}
       >
-        <div className="w-2 h-2 bg-gray-400 rounded-full" />
-        <p className="text-sm text-gray-600">Sync status unavailable</p>
+        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--foreground-muted, #9CA3AF)' }} />
+        <p className="text-sm" style={{ color: 'var(--foreground-muted, #6B7280)' }}>Sync status unavailable</p>
       </div>
     );
   }
@@ -134,12 +142,16 @@ export function SyncStatusBanner({ className }: SyncStatusBannerProps) {
     return (
       <div
         className={cn(
-          'rounded-lg px-4 py-3 flex items-center gap-3 bg-blue-50 border border-blue-200',
+          'rounded-lg px-4 py-3 flex items-center gap-3 border',
           className
         )}
+        style={{
+          backgroundColor: 'var(--card-background, #FFFFFF)',
+          borderColor: 'var(--accent-color, #2563EB)',
+        }}
       >
-        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-        <p className="text-sm text-blue-800">Sync in progress...</p>
+        <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--accent-color, #2563EB)' }} />
+        <p className="text-sm" style={{ color: 'var(--accent-color, #2563EB)' }}>Sync in progress...</p>
       </div>
     );
   }
@@ -148,12 +160,16 @@ export function SyncStatusBanner({ className }: SyncStatusBannerProps) {
   return (
     <div
       className={cn(
-        'rounded-lg px-4 py-3 flex items-center gap-3 bg-blue-50 border border-blue-200',
+        'rounded-lg px-4 py-3 flex items-center gap-3 border',
         className
       )}
+      style={{
+        backgroundColor: 'var(--card-background, #FFFFFF)',
+        borderColor: 'var(--accent-color, #2563EB)',
+      }}
     >
       <div className="w-2 h-2 bg-green-500 rounded-full" />
-      <p className="text-sm text-blue-800">
+      <p className="text-sm" style={{ color: 'var(--accent-color, #2563EB)' }}>
         Data last synced:{' '}
         <span className="font-medium">
           {syncData.lastSyncAt ? formatTimeDifference(syncData.lastSyncAt) : 'Never'}

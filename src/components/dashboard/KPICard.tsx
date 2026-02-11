@@ -28,17 +28,21 @@ export function KPICard({ label, value, subtitle, loading, className }: KPICardP
   return (
     <div
       className={cn(
-        'bg-white rounded-xl border border-gray-200 p-6',
+        'rounded-xl border p-6',
         className
       )}
+      style={{
+        backgroundColor: 'var(--card-background, #FFFFFF)',
+        borderColor: 'var(--card-border, #E5E7EB)',
+      }}
     >
-      <p className="text-sm font-medium text-gray-500">{label}</p>
+      <p className="text-sm font-medium" style={{ color: 'var(--foreground-muted, #6B7280)' }}>{label}</p>
       {loading ? (
-        <div className="mt-2 h-9 w-24 bg-gray-200 rounded animate-pulse" />
+        <div className="mt-2 h-9 w-24 rounded animate-pulse" style={{ backgroundColor: 'var(--border, #E5E7EB)' }} />
       ) : (
-        <p className="mt-2 text-3xl font-semibold text-gray-900">{value}</p>
+        <p className="mt-2 text-3xl font-semibold" style={{ color: 'var(--foreground, #111827)' }}>{value}</p>
       )}
-      {subtitle && <p className="mt-1 text-sm text-gray-500">{subtitle}</p>}
+      {subtitle && <p className="mt-1 text-sm" style={{ color: 'var(--foreground-muted, #6B7280)' }}>{subtitle}</p>}
     </div>
   );
 }

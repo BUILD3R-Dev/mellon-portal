@@ -147,11 +147,18 @@ export function DashboardIsland() {
     <div className="space-y-8">
       {/* Period Selector */}
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-600 mr-2">Time period:</span>
+        <span className="text-sm font-medium mr-2" style={{ color: 'var(--foreground-muted, #6B7280)' }}>Time period:</span>
         <select
           value={period}
           onChange={(e) => handlePeriodChange(e.target.value as Period)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="rounded-lg border px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2"
+          style={{
+            backgroundColor: 'var(--card-background, #FFFFFF)',
+            borderColor: 'var(--border, #E5E7EB)',
+            color: 'var(--foreground, #111827)',
+            // @ts-ignore CSS custom property
+            '--tw-ring-color': 'var(--accent-color, #2563EB)',
+          } as React.CSSProperties}
         >
           {PERIOD_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -193,13 +200,13 @@ export function DashboardIsland() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {pipelineLoading ? (
           <>
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <div className="h-8 w-32 bg-gray-200 rounded animate-pulse mb-4" />
-              <div className="h-64 bg-gray-100 rounded animate-pulse" />
+            <div className="rounded-xl border p-6" style={{ backgroundColor: 'var(--card-background, #FFFFFF)', borderColor: 'var(--card-border, #E5E7EB)' }}>
+              <div className="h-8 w-32 rounded animate-pulse mb-4" style={{ backgroundColor: 'var(--border, #E5E7EB)' }} />
+              <div className="h-64 rounded animate-pulse" style={{ backgroundColor: 'var(--border-muted, #F3F4F6)' }} />
             </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <div className="h-8 w-32 bg-gray-200 rounded animate-pulse mb-4" />
-              <div className="h-64 bg-gray-100 rounded animate-pulse" />
+            <div className="rounded-xl border p-6" style={{ backgroundColor: 'var(--card-background, #FFFFFF)', borderColor: 'var(--card-border, #E5E7EB)' }}>
+              <div className="h-8 w-32 rounded animate-pulse mb-4" style={{ backgroundColor: 'var(--border, #E5E7EB)' }} />
+              <div className="h-64 rounded animate-pulse" style={{ backgroundColor: 'var(--border-muted, #F3F4F6)' }} />
             </div>
           </>
         ) : (

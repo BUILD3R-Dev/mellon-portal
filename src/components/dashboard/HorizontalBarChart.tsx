@@ -25,6 +25,15 @@ export interface HorizontalBarChartProps {
 }
 
 /**
+ * Reads a CSS variable from :root, with fallback
+ */
+function getCSSVar(name: string, fallback: string): string {
+  if (typeof window === 'undefined') return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
+/**
  * HorizontalBarChart renders a horizontal bar chart showing counts by stage.
  */
 export function HorizontalBarChart({
@@ -36,6 +45,11 @@ export function HorizontalBarChart({
   // Reverse so ECharts renders the first item at the top of the y-axis
   const chartData = [...data].reverse();
 
+  const foreground = getCSSVar('--foreground', '#111827');
+  const foregroundMuted = getCSSVar('--foreground-muted', '#6B7280');
+  const borderColor = getCSSVar('--border', '#E5E7EB');
+  const borderMuted = getCSSVar('--border-muted', '#F3F4F6');
+
   const option = {
     title: {
       text: title,
@@ -43,7 +57,7 @@ export function HorizontalBarChart({
       textStyle: {
         fontSize: 16,
         fontWeight: 600,
-        color: '#111827',
+        color: foreground,
       },
     },
     tooltip: {
@@ -62,11 +76,11 @@ export function HorizontalBarChart({
     xAxis: {
       type: 'value',
       axisLabel: {
-        color: '#6B7280',
+        color: foregroundMuted,
       },
       splitLine: {
         lineStyle: {
-          color: '#F3F4F6',
+          color: borderMuted,
         },
       },
     },
@@ -74,13 +88,13 @@ export function HorizontalBarChart({
       type: 'category',
       data: chartData.map((d) => d.stage),
       axisLabel: {
-        color: '#6B7280',
+        color: foregroundMuted,
         width: 100,
         overflow: 'truncate',
       },
       axisLine: {
         lineStyle: {
-          color: '#E5E7EB',
+          color: borderColor,
         },
       },
     },
@@ -97,14 +111,20 @@ export function HorizontalBarChart({
         label: {
           show: true,
           position: 'right',
-          color: '#6B7280',
+          color: foregroundMuted,
         },
       },
     ],
   };
 
   return (
-    <div className={cn('bg-white rounded-xl border border-gray-200 p-6', className)}>
+    <div
+      className={cn('rounded-xl border p-6', className)}
+      style={{
+        backgroundColor: 'var(--card-background, #FFFFFF)',
+        borderColor: 'var(--card-border, #E5E7EB)',
+      }}
+    >
       <ReactECharts
         option={option}
         style={{ height: `${height}px`, width: '100%' }}
