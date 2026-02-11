@@ -1,30 +1,9 @@
 ---
-import Layout from '../layouts/Layout.astro';
+if (Astro.locals.isAuthenticated) {
+  if (Astro.locals.isAgencyAdmin) {
+    return Astro.redirect('/admin/dashboard');
+  }
+  return Astro.redirect('/dashboard');
+}
+return Astro.redirect('/login');
 ---
-
-<Layout title="Welcome">
-  <main class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-    <div class="text-center max-w-2xl px-4">
-      <h1 class="text-4xl font-bold text-gray-900 mb-4">
-        Mellon Franchising
-      </h1>
-      <p class="text-xl text-gray-600 mb-8">
-        Client Portal
-      </p>
-      <div class="flex flex-col sm:flex-row gap-4 justify-center">
-        <a
-          href="/login"
-          class="inline-flex items-center justify-center px-6 py-3 text-base font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors"
-        >
-          Sign In
-        </a>
-        <a
-          href="/dashboard"
-          class="inline-flex items-center justify-center px-6 py-3 text-base font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          View Dashboard
-        </a>
-      </div>
-    </div>
-  </main>
-</Layout>
