@@ -44,6 +44,12 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'exec node /app/dist/server/entry.mjs' >> /app/start.sh && \
     chmod +x /app/start.sh
 
+# Create persistent data directory for uploads
+RUN mkdir -p /app/data/uploads
+
+# Declare volume so uploads survive container rebuilds
+VOLUME /app/data
+
 # Expose port
 EXPOSE 4321
 

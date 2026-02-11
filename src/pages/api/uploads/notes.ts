@@ -1,24 +1,16 @@
 /**
- * POST /api/uploads/notes
+ * POST /api/uploads/notes — Upload an image for use in notes
+ * GET  /api/uploads/notes?file={tenantId}/{filename} — Serve an uploaded image
  *
- * Uploads an image for use in notes.
- * In dev: stores in public/uploads/notes/{tenantId}/ (served by Vite)
- * In prod: stores in dist/client/uploads/notes/{tenantId}/ (served by Astro standalone)
- * Returns the public URL for the uploaded image.
+ * Files are stored in a persistent data directory (data/uploads/notes/{tenantId}/)
+ * that survives Docker rebuilds. The returned URL points to the GET handler
+ * so images are served through the API rather than as static files.
  */
 import type { APIRoute } from 'astro';
 import { validateSession, SESSION_COOKIE_NAME, getUserMemberships, TENANT_COOKIE_NAME } from '@/lib/auth';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-
-/** Returns the directory from which static files are served at runtime. */
-function getStaticDir(): string {
-  if (import.meta.env.PROD) {
-    return path.join(process.cwd(), 'dist', 'client');
-  }
-  return path.join(process.cwd(), 'public');
-}
 
 const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -28,6 +20,54 @@ const MIME_TO_EXT: Record<string, string> = {
   'image/jpeg': '.jpg',
   'image/gif': '.gif',
   'image/webp': '.webp',
+};
+
+const EXT_TO_MIME: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+};
+
+/** Persistent upload directory that survives Docker rebuilds */
+function getUploadBaseDir(): string {
+  return path.join(process.cwd(), 'data', 'uploads', 'notes');
+}
+
+export const GET: APIRoute = async ({ url }) => {
+  try {
+    const fileParam = url.searchParams.get('file');
+    if (!fileParam) {
+      return new Response('Not found', { status: 404 });
+    }
+
+    // Sanitize: only allow {uuid}/{filename} patterns, no path traversal
+    const normalized = path.normalize(fileParam);
+    if (normalized.includes('..') || path.isAbsolute(normalized)) {
+      return new Response('Not found', { status: 404 });
+    }
+
+    const filePath = path.join(getUploadBaseDir(), normalized);
+    if (!fs.existsSync(filePath)) {
+      return new Response('Not found', { status: 404 });
+    }
+
+    const ext = path.extname(filePath).toLowerCase();
+    const contentType = EXT_TO_MIME[ext] || 'application/octet-stream';
+    const fileBuffer = fs.readFileSync(filePath);
+
+    return new Response(fileBuffer, {
+      status: 200,
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=31536000, immutable',
+      },
+    });
+  } catch (error) {
+    console.error('Error serving note image:', error);
+    return new Response('Internal server error', { status: 500 });
+  }
 };
 
 export const POST: APIRoute = async ({ cookies, request }) => {
@@ -99,8 +139,8 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Create storage directory (write to the directory the server actually serves)
-    const uploadDir = path.join(getStaticDir(), 'uploads', 'notes', tenantId);
+    // Store in persistent data directory
+    const uploadDir = path.join(getUploadBaseDir(), tenantId);
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
@@ -110,11 +150,13 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     const uniqueId = crypto.randomBytes(8).toString('hex');
     const filename = `${Date.now()}-${uniqueId}${ext}`;
     const filePath = path.join(uploadDir, filename);
-    const relativeUrl = `/uploads/notes/${tenantId}/${filename}`;
 
     fs.writeFileSync(filePath, buffer);
 
-    return new Response(JSON.stringify({ success: true, url: relativeUrl }), {
+    // Return URL that points to the GET handler
+    const imageUrl = `/api/uploads/notes?file=${encodeURIComponent(`${tenantId}/${filename}`)}`;
+
+    return new Response(JSON.stringify({ success: true, url: imageUrl }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
