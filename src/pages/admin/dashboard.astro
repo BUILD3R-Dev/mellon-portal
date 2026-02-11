@@ -1,5 +1,7 @@
 ---
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { db, tenants, users, reportWeeks } from '@/lib/db';
+import { eq, and, gte, sql } from 'drizzle-orm';
 
 // This page is protected by middleware
 const { user, memberships } = Astro.locals;
@@ -10,6 +12,31 @@ const isAgencyAdmin = memberships?.some((m) => m.role === 'agency_admin' && m.te
 if (!isAgencyAdmin) {
   // Redirect non-admin users to regular dashboard
   return Astro.redirect('/dashboard');
+}
+
+// Fetch admin stats
+let totalTenants = 0;
+let totalUsers = 0;
+let pendingInvites = 0;
+let reportsThisMonth = 0;
+
+try {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [tenantCount, userCount, inviteCount, reportCount] = await Promise.all([
+    db.select({ count: sql<number>`count(*)::int` }).from(tenants).where(eq(tenants.status, 'active')),
+    db.select({ count: sql<number>`count(*)::int` }).from(users).where(eq(users.status, 'active')),
+    db.select({ count: sql<number>`count(*)::int` }).from(users).where(eq(users.status, 'pending')),
+    db.select({ count: sql<number>`count(*)::int` }).from(reportWeeks).where(gte(reportWeeks.createdAt, monthStart)),
+  ]);
+
+  totalTenants = tenantCount[0]?.count || 0;
+  totalUsers = userCount[0]?.count || 0;
+  pendingInvites = inviteCount[0]?.count || 0;
+  reportsThisMonth = reportCount[0]?.count || 0;
+} catch (error) {
+  console.error('Error fetching admin stats:', error);
 }
 ---
 
@@ -26,22 +53,22 @@ if (!isAgencyAdmin) {
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <p class="text-sm font-medium text-gray-500">Total Tenants</p>
-        <p class="mt-2 text-3xl font-semibold text-gray-900">--</p>
+        <p class="mt-2 text-3xl font-semibold text-gray-900">{totalTenants}</p>
         <p class="mt-1 text-sm text-gray-500">Active accounts</p>
       </div>
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <p class="text-sm font-medium text-gray-500">Total Users</p>
-        <p class="mt-2 text-3xl font-semibold text-gray-900">--</p>
+        <p class="mt-2 text-3xl font-semibold text-gray-900">{totalUsers}</p>
         <p class="mt-1 text-sm text-gray-500">Across all tenants</p>
       </div>
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <p class="text-sm font-medium text-gray-500">Pending Invites</p>
-        <p class="mt-2 text-3xl font-semibold text-gray-900">--</p>
+        <p class="mt-2 text-3xl font-semibold text-gray-900">{pendingInvites}</p>
         <p class="mt-1 text-sm text-gray-500">Awaiting acceptance</p>
       </div>
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <p class="text-sm font-medium text-gray-500">Reports Generated</p>
-        <p class="mt-2 text-3xl font-semibold text-gray-900">--</p>
+        <p class="mt-2 text-3xl font-semibold text-gray-900">{reportsThisMonth}</p>
         <p class="mt-1 text-sm text-gray-500">This month</p>
       </div>
     </div>
