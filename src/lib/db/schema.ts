@@ -278,6 +278,18 @@ export const contacts = pgTable('contacts', {
   uniqueIndex('contacts_tenant_external_id_idx').on(table.tenantId, table.externalId),
 ]);
 
+// Portal Branding (single-row, portal-level appearance settings)
+export const portalBranding = pgTable('portal_branding', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  headerLogoLightUrl: text('header_logo_light_url'),
+  headerLogoDarkUrl: text('header_logo_dark_url'),
+  footerLogoLightUrl: text('footer_logo_light_url'),
+  footerLogoDarkUrl: text('footer_logo_dark_url'),
+  faviconUrl: text('favicon_url'),
+  adminThemeId: varchar('admin_theme_id', { length: 50 }).notNull().default('light'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // Feature Flags Table
 export const featureFlags = pgTable('feature_flags', {
   id: uuid('id').primaryKey().defaultRandom(),

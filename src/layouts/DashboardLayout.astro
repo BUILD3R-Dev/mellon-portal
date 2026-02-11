@@ -1,6 +1,6 @@
 ---
 import '../styles/global.css';
-import { db, tenantBranding, tenants } from '@/lib/db';
+import { db, tenantBranding, tenants, portalBranding } from '@/lib/db';
 import { eq, inArray } from 'drizzle-orm';
 import { generateCSSRootBlock, getDefaultBrandingVariables } from '@/lib/themes';
 import { WorkspaceSelector } from '../components/common/WorkspaceSelector';
@@ -112,6 +112,16 @@ if (showWorkspaceSelector) {
 let tenantBrandingData = null;
 let cssVariables = generateCSSRootBlock('light'); // Default to light theme
 
+// Portal branding for admin context
+let portalBrandingData: {
+  headerLogoLightUrl: string | null;
+  headerLogoDarkUrl: string | null;
+  footerLogoLightUrl: string | null;
+  footerLogoDarkUrl: string | null;
+  faviconUrl: string | null;
+  adminThemeId: string;
+} | null = null;
+
 if (tenantId) {
   try {
     const brandingResult = await db
@@ -134,7 +144,41 @@ if (tenantId) {
   } catch (error) {
     console.error('Error fetching tenant branding:', error);
   }
+} else {
+  // Admin context: fetch portal branding
+  try {
+    const pbResult = await db.select().from(portalBranding).limit(1);
+    if (pbResult.length > 0) {
+      portalBrandingData = pbResult[0];
+      cssVariables = generateCSSRootBlock(portalBrandingData.adminThemeId || 'light');
+    }
+  } catch (error) {
+    console.error('Error fetching portal branding:', error);
+  }
 }
+
+// Determine header logo based on context
+let headerLogoUrl: string | null = null;
+if (tenantId) {
+  headerLogoUrl = tenantBrandingData?.tenantLogoUrl || null;
+} else if (portalBrandingData) {
+  const isDark = portalBrandingData.adminThemeId === 'dark';
+  headerLogoUrl = isDark
+    ? (portalBrandingData.headerLogoDarkUrl || portalBrandingData.headerLogoLightUrl)
+    : portalBrandingData.headerLogoLightUrl;
+}
+
+// Determine footer logo for admin context
+let footerLogoUrl: string | null = null;
+if (!tenantId && portalBrandingData) {
+  const isDark = portalBrandingData.adminThemeId === 'dark';
+  footerLogoUrl = isDark
+    ? (portalBrandingData.footerLogoDarkUrl || portalBrandingData.footerLogoLightUrl)
+    : portalBrandingData.footerLogoLightUrl;
+}
+
+// Determine favicon
+const faviconUrl = (!tenantId && portalBrandingData?.faviconUrl) || '/favicon.svg';
 
 const tenantLogoUrl = tenantBrandingData?.tenantLogoUrl;
 const inTenantContext = !!tenantId;
@@ -146,7 +190,7 @@ const inTenantContext = !!tenantId;
     <meta charset="UTF-8" />
     <meta name="description" content="Mellon Franchising Client Portal" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href={faviconUrl} />
     <title>{title} | Mellon Portal</title>
     <!-- Inject CSS custom properties for theming -->
     <style set:html={cssVariables}></style>
@@ -155,12 +199,12 @@ const inTenantContext = !!tenantId;
     <header class="sticky top-0 z-50 w-full border-b header-backdrop" style="border-color: var(--border, #E5E7EB);">
       <div class="container mx-auto flex h-16 items-center justify-between px-4">
         <div class="flex items-center gap-4">
-          <!-- Tenant logo, tenant name, or Mellon Portal fallback -->
-          {tenantLogoUrl ? (
+          <!-- Tenant logo, header logo, tenant name, or Mellon Portal fallback -->
+          {(tenantLogoUrl || headerLogoUrl) ? (
             <a href="/dashboard" class="flex items-center hover:opacity-80 transition-opacity">
               <img
-                src={tenantLogoUrl}
-                alt={tenantName ? `${tenantName} logo` : 'Tenant logo'}
+                src={tenantLogoUrl || headerLogoUrl}
+                alt={tenantName ? `${tenantName} logo` : 'Portal logo'}
                 class="h-8 md:h-10 max-w-[160px] object-contain"
               />
             </a>
@@ -355,10 +399,18 @@ const inTenantContext = !!tenantId;
     <footer class="border-t py-6" style="background-color: var(--background-secondary, #FFFFFF); border-color: var(--border, #E5E7EB);">
       <div class="container mx-auto px-4">
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <div class="flex items-center gap-2">
-            <span class="text-sm" style="color: var(--foreground-muted, #6B7280);">Powered by</span>
-            <span class="text-sm font-semibold" style="color: var(--accent-color, #2563EB);">Mellon Franchising</span>
-          </div>
+          {footerLogoUrl ? (
+            <img
+              src={footerLogoUrl}
+              alt="Footer logo"
+              class="h-6 max-w-[140px] object-contain"
+            />
+          ) : (
+            <div class="flex items-center gap-2">
+              <span class="text-sm" style="color: var(--foreground-muted, #6B7280);">Powered by</span>
+              <span class="text-sm font-semibold" style="color: var(--accent-color, #2563EB);">Mellon Franchising</span>
+            </div>
+          )}
           <span class="hidden sm:inline h-4 w-px" style="background-color: var(--border, #E5E7EB);"></span>
           <span class="text-xs" style="color: var(--foreground-muted, #9CA3AF);">
             &copy; {new Date().getFullYear()} Mellon Franchising. All rights reserved.
