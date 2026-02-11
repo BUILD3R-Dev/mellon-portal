@@ -1,17 +1,17 @@
+/**
+ * GET    /api/tenants/[id]/logo — Serve the tenant's logo image
+ * POST   /api/tenants/[id]/logo — Upload a logo for the tenant
+ * DELETE /api/tenants/[id]/logo — Remove the tenant's logo
+ *
+ * Logos are stored in data/uploads/logos/{tenantId}/ (persistent across deploys).
+ * The GET handler serves the file directly with immutable cache headers.
+ */
 import type { APIRoute } from 'astro';
 import { validateSession, SESSION_COOKIE_NAME, getUserMemberships } from '@/lib/auth';
 import { db, tenants, tenantBranding } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import * as fs from 'fs';
 import * as path from 'path';
-
-/** Returns the directory from which static files are served at runtime. */
-function getStaticDir(): string {
-  if (import.meta.env.PROD) {
-    return path.join(process.cwd(), 'dist', 'client');
-  }
-  return path.join(process.cwd(), 'public');
-}
 
 interface LogoResponse {
   success: true;
@@ -31,39 +31,45 @@ const MAX_FILE_SIZE = 500 * 1024; // 500KB
 const MAX_WIDTH = 400;
 const MAX_HEIGHT = 150;
 
+const MIME_TO_EXT: Record<string, string> = {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/svg+xml': '.svg',
+};
+
+const EXT_TO_MIME: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.svg': 'image/svg+xml',
+};
+
+/** Persistent upload directory that survives Docker rebuilds */
+function getLogoDir(tenantId: string): string {
+  return path.join(process.cwd(), 'data', 'uploads', 'logos', tenantId);
+}
+
 /**
  * Validates agency admin authorization
  */
 async function validateAgencyAdmin(cookies: any): Promise<{ isAuthorized: boolean; userId?: string; errorResponse?: Response }> {
   const sessionToken = cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!sessionToken) {
-    const response: LogoErrorResponse = {
-      success: false,
-      error: 'Authentication required',
-      code: 'UNAUTHORIZED',
-    };
     return {
       isAuthorized: false,
-      errorResponse: new Response(JSON.stringify(response), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      }),
+      errorResponse: new Response(JSON.stringify({
+        success: false, error: 'Authentication required', code: 'UNAUTHORIZED',
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } }),
     };
   }
 
   const session = await validateSession(sessionToken);
   if (!session) {
-    const response: LogoErrorResponse = {
-      success: false,
-      error: 'Invalid or expired session',
-      code: 'UNAUTHORIZED',
-    };
     return {
       isAuthorized: false,
-      errorResponse: new Response(JSON.stringify(response), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      }),
+      errorResponse: new Response(JSON.stringify({
+        success: false, error: 'Invalid or expired session', code: 'UNAUTHORIZED',
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } }),
     };
   }
 
@@ -71,17 +77,11 @@ async function validateAgencyAdmin(cookies: any): Promise<{ isAuthorized: boolea
   const isAgencyAdmin = userMemberships.some((m) => m.role === 'agency_admin' && m.tenantId === null);
 
   if (!isAgencyAdmin) {
-    const response: LogoErrorResponse = {
-      success: false,
-      error: 'Only agency administrators can access this resource',
-      code: 'FORBIDDEN',
-    };
     return {
       isAuthorized: false,
-      errorResponse: new Response(JSON.stringify(response), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' },
-      }),
+      errorResponse: new Response(JSON.stringify({
+        success: false, error: 'Only agency administrators can access this resource', code: 'FORBIDDEN',
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } }),
     };
   }
 
@@ -89,47 +89,56 @@ async function validateAgencyAdmin(cookies: any): Promise<{ isAuthorized: boolea
 }
 
 /**
- * Gets the extension from a MIME type
+ * Finds the logo file on disk for a tenant (logo.png, logo.jpg, or logo.svg)
  */
-function getExtensionFromMimeType(mimeType: string): string {
-  switch (mimeType) {
-    case 'image/png':
-      return '.png';
-    case 'image/jpeg':
-      return '.jpg';
-    case 'image/svg+xml':
-      return '.svg';
-    default:
-      return '';
+function findLogoFile(tenantId: string): { filePath: string; ext: string } | null {
+  const dir = getLogoDir(tenantId);
+  for (const ext of ['.png', '.jpg', '.svg']) {
+    const filePath = path.join(dir, `logo${ext}`);
+    if (fs.existsSync(filePath)) {
+      return { filePath, ext };
+    }
   }
+  return null;
 }
 
 /**
- * Ensures directory exists
+ * GET /api/tenants/[id]/logo
+ *
+ * Serves the tenant's logo image from the persistent data directory.
  */
-function ensureDirectoryExists(dirPath: string): void {
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
+export const GET: APIRoute = async ({ params }) => {
+  try {
+    const tenantId = params.id;
+    if (!tenantId) {
+      return new Response('Not found', { status: 404 });
+    }
+
+    const logo = findLogoFile(tenantId);
+    if (!logo) {
+      return new Response('Not found', { status: 404 });
+    }
+
+    const contentType = EXT_TO_MIME[logo.ext] || 'application/octet-stream';
+    const fileBuffer = fs.readFileSync(logo.filePath);
+
+    return new Response(fileBuffer, {
+      status: 200,
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=86400',
+      },
+    });
+  } catch (error) {
+    console.error('Error serving logo:', error);
+    return new Response('Internal server error', { status: 500 });
   }
-}
+};
 
 /**
  * POST /api/tenants/[id]/logo
  *
- * Uploads a logo for the tenant.
- * Only accessible by agency admins.
- *
- * Request: multipart/form-data with 'logo' file
- * - Accepts: PNG, JPG, SVG
- * - Max size: 500KB
- * - Max dimensions: 400x150 pixels
- *
- * Response:
- * - 200: Logo URL
- * - 400: Validation error
- * - 401: Unauthorized
- * - 403: Forbidden (not an agency admin)
- * - 404: Tenant not found
+ * Uploads a logo for the tenant. Only accessible by agency admins.
  */
 export const POST: APIRoute = async ({ cookies, params, request }) => {
   try {
@@ -140,15 +149,9 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
 
     const tenantId = params.id;
     if (!tenantId) {
-      const response: LogoErrorResponse = {
-        success: false,
-        error: 'Tenant ID is required',
-        code: 'VALIDATION_ERROR',
-      };
-      return new Response(JSON.stringify(response), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(JSON.stringify({
+        success: false, error: 'Tenant ID is required', code: 'VALIDATION_ERROR',
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Check if tenant exists
@@ -159,15 +162,9 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       .limit(1);
 
     if (existingTenant.length === 0) {
-      const response: LogoErrorResponse = {
-        success: false,
-        error: 'Tenant not found',
-        code: 'NOT_FOUND',
-      };
-      return new Response(JSON.stringify(response), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(JSON.stringify({
+        success: false, error: 'Tenant not found', code: 'NOT_FOUND',
+      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Parse form data
@@ -175,41 +172,23 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
     const file = formData.get('logo') as File | null;
 
     if (!file) {
-      const response: LogoErrorResponse = {
-        success: false,
-        error: 'No logo file provided',
-        code: 'VALIDATION_ERROR',
-      };
-      return new Response(JSON.stringify(response), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(JSON.stringify({
+        success: false, error: 'No logo file provided', code: 'VALIDATION_ERROR',
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Validate file type
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-      const response: LogoErrorResponse = {
-        success: false,
-        error: 'Invalid file type. Allowed types: PNG, JPG, SVG',
-        code: 'INVALID_FILE_TYPE',
-      };
-      return new Response(JSON.stringify(response), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(JSON.stringify({
+        success: false, error: 'Invalid file type. Allowed types: PNG, JPG, SVG', code: 'INVALID_FILE_TYPE',
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      const response: LogoErrorResponse = {
-        success: false,
-        error: 'File size exceeds maximum of 500KB',
-        code: 'FILE_TOO_LARGE',
-      };
-      return new Response(JSON.stringify(response), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(JSON.stringify({
+        success: false, error: 'File size exceeds maximum of 500KB', code: 'FILE_TOO_LARGE',
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Read file data
@@ -218,20 +197,15 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
 
     // For PNG and JPEG, check dimensions (skip for SVG)
     if (file.type === 'image/png' || file.type === 'image/jpeg') {
-      // Simple dimension check using image header parsing
-      // PNG: dimensions at bytes 16-23
-      // JPEG: more complex, scan for SOF marker
       let width = 0;
       let height = 0;
 
       if (file.type === 'image/png') {
-        // PNG header: width at bytes 16-19, height at bytes 20-23 (big endian)
         if (buffer.length >= 24) {
           width = buffer.readUInt32BE(16);
           height = buffer.readUInt32BE(20);
         }
       } else if (file.type === 'image/jpeg') {
-        // JPEG: scan for SOF0 or SOF2 marker (0xFF 0xC0 or 0xFF 0xC2)
         for (let i = 0; i < buffer.length - 8; i++) {
           if (buffer[i] === 0xff && (buffer[i + 1] === 0xc0 || buffer[i + 1] === 0xc2)) {
             height = buffer.readUInt16BE(i + 5);
@@ -242,43 +216,34 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       }
 
       if (width > MAX_WIDTH || height > MAX_HEIGHT) {
-        const response: LogoErrorResponse = {
+        return new Response(JSON.stringify({
           success: false,
           error: `Image dimensions exceed maximum of ${MAX_WIDTH}x${MAX_HEIGHT} pixels`,
           code: 'DIMENSIONS_TOO_LARGE',
-        };
-        return new Response(JSON.stringify(response), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
     }
 
-    // Create storage directory (write to the directory the server actually serves)
-    const uploadDir = path.join(getStaticDir(), 'uploads', 'logos', tenantId);
-    ensureDirectoryExists(uploadDir);
-
-    // Delete existing logo if any
-    const existingBranding = await db
-      .select({ tenantLogoUrl: tenantBranding.tenantLogoUrl })
-      .from(tenantBranding)
-      .where(eq(tenantBranding.tenantId, tenantId))
-      .limit(1);
-
-    if (existingBranding.length > 0 && existingBranding[0].tenantLogoUrl) {
-      const oldFilePath = path.join(getStaticDir(), existingBranding[0].tenantLogoUrl);
-      if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath);
-      }
+    // Create persistent storage directory
+    const uploadDir = getLogoDir(tenantId);
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    // Generate filename and save file
-    const extension = getExtensionFromMimeType(file.type);
+    // Delete existing logo file if any
+    const existingLogo = findLogoFile(tenantId);
+    if (existingLogo) {
+      fs.unlinkSync(existingLogo.filePath);
+    }
+
+    // Save file
+    const extension = MIME_TO_EXT[file.type] || '';
     const filename = `logo${extension}`;
     const filePath = path.join(uploadDir, filename);
-    const relativeUrl = `/uploads/logos/${tenantId}/${filename}`;
-
     fs.writeFileSync(filePath, buffer);
+
+    // URL points to the GET handler
+    const logoUrl = `/api/tenants/${tenantId}/logo`;
 
     // Update database
     const existingRecord = await db
@@ -288,20 +253,18 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       .limit(1);
 
     if (existingRecord.length === 0) {
-      // Create new branding record
       await db
         .insert(tenantBranding)
         .values({
           tenantId,
-          tenantLogoUrl: relativeUrl,
+          tenantLogoUrl: logoUrl,
           themeId: 'light',
         });
     } else {
-      // Update existing branding record
       await db
         .update(tenantBranding)
         .set({
-          tenantLogoUrl: relativeUrl,
+          tenantLogoUrl: logoUrl,
           updatedAt: new Date(),
         })
         .where(eq(tenantBranding.tenantId, tenantId));
@@ -309,9 +272,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
 
     const response: LogoResponse = {
       success: true,
-      data: {
-        tenantLogoUrl: relativeUrl,
-      },
+      data: { tenantLogoUrl: logoUrl },
     };
 
     return new Response(JSON.stringify(response), {
@@ -320,29 +281,16 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
     });
   } catch (error) {
     console.error('Error uploading logo:', error);
-    const response: LogoErrorResponse = {
-      success: false,
-      error: 'An unexpected error occurred',
-      code: 'INTERNAL_ERROR',
-    };
-    return new Response(JSON.stringify(response), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({
+      success: false, error: 'An unexpected error occurred', code: 'INTERNAL_ERROR',
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
 
 /**
  * DELETE /api/tenants/[id]/logo
  *
- * Removes the logo for the tenant.
- * Only accessible by agency admins.
- *
- * Response:
- * - 200: Logo removed
- * - 401: Unauthorized
- * - 403: Forbidden (not an agency admin)
- * - 404: Tenant not found
+ * Removes the logo for the tenant. Only accessible by agency admins.
  */
 export const DELETE: APIRoute = async ({ cookies, params }) => {
   try {
@@ -353,15 +301,9 @@ export const DELETE: APIRoute = async ({ cookies, params }) => {
 
     const tenantId = params.id;
     if (!tenantId) {
-      const response: LogoErrorResponse = {
-        success: false,
-        error: 'Tenant ID is required',
-        code: 'VALIDATION_ERROR',
-      };
-      return new Response(JSON.stringify(response), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(JSON.stringify({
+        success: false, error: 'Tenant ID is required', code: 'VALIDATION_ERROR',
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Check if tenant exists
@@ -372,33 +314,24 @@ export const DELETE: APIRoute = async ({ cookies, params }) => {
       .limit(1);
 
     if (existingTenant.length === 0) {
-      const response: LogoErrorResponse = {
-        success: false,
-        error: 'Tenant not found',
-        code: 'NOT_FOUND',
-      };
-      return new Response(JSON.stringify(response), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(JSON.stringify({
+        success: false, error: 'Tenant not found', code: 'NOT_FOUND',
+      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Get current logo URL
+    // Delete file from storage if exists
+    const existingLogo = findLogoFile(tenantId);
+    if (existingLogo) {
+      fs.unlinkSync(existingLogo.filePath);
+    }
+
+    // Update database
     const existingBranding = await db
-      .select({ tenantLogoUrl: tenantBranding.tenantLogoUrl })
+      .select({ id: tenantBranding.id })
       .from(tenantBranding)
       .where(eq(tenantBranding.tenantId, tenantId))
       .limit(1);
 
-    // Delete file from storage if exists
-    if (existingBranding.length > 0 && existingBranding[0].tenantLogoUrl) {
-      const filePath = path.join(getStaticDir(), existingBranding[0].tenantLogoUrl);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
-
-    // Update database
     if (existingBranding.length > 0) {
       await db
         .update(tenantBranding)
@@ -411,9 +344,7 @@ export const DELETE: APIRoute = async ({ cookies, params }) => {
 
     const response: LogoResponse = {
       success: true,
-      data: {
-        tenantLogoUrl: null,
-      },
+      data: { tenantLogoUrl: null },
     };
 
     return new Response(JSON.stringify(response), {
@@ -422,14 +353,8 @@ export const DELETE: APIRoute = async ({ cookies, params }) => {
     });
   } catch (error) {
     console.error('Error deleting logo:', error);
-    const response: LogoErrorResponse = {
-      success: false,
-      error: 'An unexpected error occurred',
-      code: 'INTERNAL_ERROR',
-    };
-    return new Response(JSON.stringify(response), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({
+      success: false, error: 'An unexpected error occurred', code: 'INTERNAL_ERROR',
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
