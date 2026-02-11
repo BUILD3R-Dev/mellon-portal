@@ -28,6 +28,7 @@ const allTenants = await db
     themeId: tenantBranding.themeId,
     accentColorOverride: tenantBranding.accentColorOverride,
     tenantLogoUrl: tenantBranding.tenantLogoUrl,
+    tenantLogoDarkUrl: tenantBranding.tenantLogoDarkUrl,
   })
   .from(tenants)
   .leftJoin(tenantBranding, eq(tenants.id, tenantBranding.tenantId))
@@ -48,6 +49,7 @@ const tenantsData = allTenants.map((t) => ({
         themeId: t.themeId || 'light',
         accentColorOverride: t.accentColorOverride,
         tenantLogoUrl: t.tenantLogoUrl,
+        tenantLogoDarkUrl: t.tenantLogoDarkUrl,
       }
     : null,
 }));

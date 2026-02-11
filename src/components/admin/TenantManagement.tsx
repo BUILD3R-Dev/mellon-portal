@@ -16,6 +16,7 @@ interface Tenant {
     themeId: string;
     accentColorOverride: string | null;
     tenantLogoUrl: string | null;
+    tenantLogoDarkUrl?: string | null;
     mellonLogoUrl?: string | null;
   } | null;
 }

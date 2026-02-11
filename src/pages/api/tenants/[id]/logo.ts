@@ -21,8 +21,6 @@ interface LogoResponse {
 
 const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml'];
 const MAX_FILE_SIZE = 500 * 1024; // 500KB
-const MAX_WIDTH = 400;
-const MAX_HEIGHT = 150;
 
 function getVariant(url: URL): 'light' | 'dark' {
   const v = url.searchParams.get('variant');
@@ -160,38 +158,11 @@ export const POST: APIRoute = async ({ cookies, params, request, url }) => {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    if (file.type === 'image/png' || file.type === 'image/jpeg') {
-      let width = 0;
-      let height = 0;
-
-      if (file.type === 'image/png') {
-        if (buffer.length >= 24) {
-          width = buffer.readUInt32BE(16);
-          height = buffer.readUInt32BE(20);
-        }
-      } else if (file.type === 'image/jpeg') {
-        for (let i = 0; i < buffer.length - 8; i++) {
-          if (buffer[i] === 0xff && (buffer[i + 1] === 0xc0 || buffer[i + 1] === 0xc2)) {
-            height = buffer.readUInt16BE(i + 5);
-            width = buffer.readUInt16BE(i + 7);
-            break;
-          }
-        }
-      }
-
-      if (width > MAX_WIDTH || height > MAX_HEIGHT) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: `Image dimensions exceed maximum of ${MAX_WIDTH}x${MAX_HEIGHT} pixels`,
-          code: 'DIMENSIONS_TOO_LARGE',
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-      }
-    }
-
     const variant = getVariant(url);
     const cols = getColumns(variant);
     const base64Data = buffer.toString('base64');
-    const logoUrl = `/api/tenants/${tenantId}/logo${variant === 'dark' ? '?variant=dark' : ''}`;
+    const cacheBuster = Date.now();
+    const logoUrl = `/api/tenants/${tenantId}/logo?variant=${variant}&v=${cacheBuster}`;
 
     const existingRecord = await db
       .select({ id: tenantBranding.id })
