@@ -129,9 +129,9 @@ export function PersonalInfoForm({ initialData }: PersonalInfoFormProps) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-1">Personal Information</h2>
-      <p className="text-sm text-gray-500 mb-6">Update your name and timezone preferences</p>
+    <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--card-background, white)', border: '1px solid var(--border, #E5E7EB)' }}>
+      <h2 className="text-lg font-semibold mb-1" style={{ color: 'var(--foreground, #111827)' }}>Personal Information</h2>
+      <p className="text-sm mb-6" style={{ color: 'var(--foreground-muted, #6B7280)' }}>Update your name and timezone preferences</p>
 
       {/* Notification */}
       {notification && (
@@ -162,7 +162,7 @@ export function PersonalInfoForm({ initialData }: PersonalInfoFormProps) {
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Email (read-only) */}
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label htmlFor="email" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--foreground, #111827)' }}>
             Email address
           </label>
           <input
@@ -170,14 +170,15 @@ export function PersonalInfoForm({ initialData }: PersonalInfoFormProps) {
             id="email"
             value={initialData.email}
             disabled
-            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+            className="w-full px-4 py-2.5 rounded-lg cursor-not-allowed opacity-60"
+            style={{ backgroundColor: 'var(--background-secondary, #F9FAFB)', color: 'var(--foreground-muted, #6B7280)', border: '1px solid var(--border, #D1D5DB)' }}
           />
-          <p className="mt-1 text-xs text-gray-500">Email cannot be changed</p>
+          <p className="mt-1 text-xs" style={{ color: 'var(--foreground-muted, #6B7280)' }}>Email cannot be changed</p>
         </div>
 
         {/* Name */}
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label htmlFor="name" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--foreground, #111827)' }}>
             Full name
           </label>
           <input
@@ -187,7 +188,8 @@ export function PersonalInfoForm({ initialData }: PersonalInfoFormProps) {
             value={formState.name}
             onChange={handleInputChange}
             disabled={isSubmitting}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-2.5 rounded-lg outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: 'var(--background-secondary, #F9FAFB)', color: 'var(--foreground, #111827)', border: '1px solid var(--border, #D1D5DB)' }}
             placeholder="Enter your full name"
             aria-invalid={!!errors.name}
             aria-describedby={errors.name ? 'name-error' : undefined}
@@ -201,7 +203,7 @@ export function PersonalInfoForm({ initialData }: PersonalInfoFormProps) {
 
         {/* Timezone */}
         <div>
-          <label htmlFor="timezone" className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label htmlFor="timezone" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--foreground, #111827)' }}>
             Timezone
           </label>
           <select
@@ -210,7 +212,8 @@ export function PersonalInfoForm({ initialData }: PersonalInfoFormProps) {
             value={formState.timezone}
             onChange={handleInputChange}
             disabled={isSubmitting}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-white"
+            className="w-full px-4 py-2.5 rounded-lg outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: 'var(--background-secondary, #F9FAFB)', color: 'var(--foreground, #111827)', border: '1px solid var(--border, #D1D5DB)' }}
             aria-invalid={!!errors.timezone}
             aria-describedby={errors.timezone ? 'timezone-error' : undefined}
           >
@@ -243,14 +246,16 @@ export function PersonalInfoForm({ initialData }: PersonalInfoFormProps) {
             type="button"
             onClick={handleReset}
             disabled={isSubmitting || !hasChanges}
-            className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: 'var(--card-background, white)', color: 'var(--foreground, #374151)', border: '1px solid var(--border, #D1D5DB)' }}
           >
             Reset
           </button>
           <button
             type="submit"
             disabled={isSubmitting || !hasChanges}
-            className="px-4 py-2.5 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2.5 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            style={{ backgroundColor: 'var(--accent-color, #1F2937)' }}
           >
             {isSubmitting ? (
               <>

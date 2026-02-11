@@ -45,8 +45,8 @@ const profileData = {
   <div class="max-w-2xl mx-auto space-y-8">
     <!-- Page Header -->
     <div>
-      <h1 class="text-2xl font-semibold text-gray-900">Profile Settings</h1>
-      <p class="mt-1 text-gray-600">Manage your account settings and preferences</p>
+      <h1 class="text-2xl font-semibold" style="color: var(--foreground, #111827);">Profile Settings</h1>
+      <p class="mt-1" style="color: var(--foreground-muted, #6B7280);">Manage your account settings and preferences</p>
     </div>
 
     <!-- Personal Information Section -->
@@ -56,18 +56,18 @@ const profileData = {
     <PasswordChangeForm client:load />
 
     <!-- Account Info (read-only) -->
-    <div class="bg-white rounded-xl border border-gray-200 p-6">
-      <h2 class="text-lg font-semibold text-gray-900 mb-1">Account Information</h2>
-      <p class="text-sm text-gray-500 mb-4">Read-only account details</p>
+    <div class="rounded-xl p-6" style="background-color: var(--card-background, white); border: 1px solid var(--border, #E5E7EB);">
+      <h2 class="text-lg font-semibold mb-1" style="color: var(--foreground, #111827);">Account Information</h2>
+      <p class="text-sm mb-4" style="color: var(--foreground-muted, #6B7280);">Read-only account details</p>
 
       <dl class="space-y-4">
         <div>
-          <dt class="text-sm font-medium text-gray-500">Account ID</dt>
-          <dd class="mt-1 text-sm text-gray-900 font-mono">{userData.id}</dd>
+          <dt class="text-sm font-medium" style="color: var(--foreground-muted, #6B7280);">Account ID</dt>
+          <dd class="mt-1 text-sm font-mono" style="color: var(--foreground, #111827);">{userData.id}</dd>
         </div>
         <div>
-          <dt class="text-sm font-medium text-gray-500">Account Created</dt>
-          <dd class="mt-1 text-sm text-gray-900">
+          <dt class="text-sm font-medium" style="color: var(--foreground-muted, #6B7280);">Account Created</dt>
+          <dd class="mt-1 text-sm" style="color: var(--foreground, #111827);">
             {new Date(userData.createdAt).toLocaleDateString('en-US', {
               year: 'numeric',
               month: 'long',
@@ -76,8 +76,8 @@ const profileData = {
           </dd>
         </div>
         <div>
-          <dt class="text-sm font-medium text-gray-500">Last Updated</dt>
-          <dd class="mt-1 text-sm text-gray-900">
+          <dt class="text-sm font-medium" style="color: var(--foreground-muted, #6B7280);">Last Updated</dt>
+          <dd class="mt-1 text-sm" style="color: var(--foreground, #111827);">
             {new Date(userData.updatedAt).toLocaleDateString('en-US', {
               year: 'numeric',
               month: 'long',

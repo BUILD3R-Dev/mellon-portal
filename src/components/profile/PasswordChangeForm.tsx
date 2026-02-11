@@ -143,9 +143,9 @@ export function PasswordChangeForm() {
     formState.confirmPassword.length > 0;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-1">Change Password</h2>
-      <p className="text-sm text-gray-500 mb-6">
+    <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--card-background, white)', border: '1px solid var(--border, #E5E7EB)' }}>
+      <h2 className="text-lg font-semibold mb-1" style={{ color: 'var(--foreground, #111827)' }}>Change Password</h2>
+      <p className="text-sm mb-6" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
         Update your password. All other sessions will be logged out.
       </p>
 
@@ -180,7 +180,8 @@ export function PasswordChangeForm() {
         <div>
           <label
             htmlFor="currentPassword"
-            className="block text-sm font-medium text-gray-700 mb-1.5"
+            className="block text-sm font-medium mb-1.5"
+            style={{ color: 'var(--foreground, #111827)' }}
           >
             Current password
           </label>
@@ -192,7 +193,8 @@ export function PasswordChangeForm() {
             onChange={handleInputChange}
             disabled={isSubmitting}
             autoComplete="current-password"
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-2.5 rounded-lg outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: 'var(--background-secondary, #F9FAFB)', color: 'var(--foreground, #111827)', border: '1px solid var(--border, #D1D5DB)' }}
             placeholder="Enter your current password"
             aria-invalid={!!errors.currentPassword}
             aria-describedby={errors.currentPassword ? 'currentPassword-error' : undefined}
@@ -206,7 +208,7 @@ export function PasswordChangeForm() {
 
         {/* New Password */}
         <div>
-          <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label htmlFor="newPassword" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--foreground, #111827)' }}>
             New password
           </label>
           <input
@@ -217,7 +219,8 @@ export function PasswordChangeForm() {
             onChange={handleInputChange}
             disabled={isSubmitting}
             autoComplete="new-password"
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-2.5 rounded-lg outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: 'var(--background-secondary, #F9FAFB)', color: 'var(--foreground, #111827)', border: '1px solid var(--border, #D1D5DB)' }}
             placeholder="Enter your new password"
             aria-invalid={!!errors.newPassword}
             aria-describedby={errors.newPassword ? 'newPassword-error' : 'newPassword-help'}
@@ -227,7 +230,7 @@ export function PasswordChangeForm() {
               {errors.newPassword}
             </p>
           ) : (
-            <p id="newPassword-help" className="mt-1 text-xs text-gray-500">
+            <p id="newPassword-help" className="mt-1 text-xs" style={{ color: 'var(--foreground-muted, #6B7280)' }}>
               Must be at least 8 characters long
             </p>
           )}
@@ -237,7 +240,8 @@ export function PasswordChangeForm() {
         <div>
           <label
             htmlFor="confirmPassword"
-            className="block text-sm font-medium text-gray-700 mb-1.5"
+            className="block text-sm font-medium mb-1.5"
+            style={{ color: 'var(--foreground, #111827)' }}
           >
             Confirm new password
           </label>
@@ -249,7 +253,8 @@ export function PasswordChangeForm() {
             onChange={handleInputChange}
             disabled={isSubmitting}
             autoComplete="new-password"
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-2.5 rounded-lg outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: 'var(--background-secondary, #F9FAFB)', color: 'var(--foreground, #111827)', border: '1px solid var(--border, #D1D5DB)' }}
             placeholder="Confirm your new password"
             aria-invalid={!!errors.confirmPassword}
             aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
@@ -290,14 +295,16 @@ export function PasswordChangeForm() {
             type="button"
             onClick={handleReset}
             disabled={isSubmitting || !hasInput}
-            className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: 'var(--card-background, white)', color: 'var(--foreground, #374151)', border: '1px solid var(--border, #D1D5DB)' }}
           >
             Clear
           </button>
           <button
             type="submit"
             disabled={isSubmitting || !hasInput}
-            className="px-4 py-2.5 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2.5 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            style={{ backgroundColor: 'var(--accent-color, #1F2937)' }}
           >
             {isSubmitting ? (
               <>
