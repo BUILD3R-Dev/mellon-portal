@@ -220,8 +220,11 @@ export async function getPostLoginRedirect(
   }
 
   if (tenantMemberships.length > 1) {
-    // Multiple tenants - redirect to workspace selection
-    return { redirectUrl: '/select-workspace' };
+    // Multiple tenants - auto-select the first one (user can switch via workspace selector)
+    return {
+      redirectUrl: '/dashboard',
+      tenantId: tenantMemberships[0].tenantId!,
+    };
   }
 
   // Fallback

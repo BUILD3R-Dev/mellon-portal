@@ -213,10 +213,7 @@ const returnUrl = Astro.url.searchParams.get('returnUrl') || '/dashboard';
       let redirectUrl = data.redirectUrl || returnUrl || '/dashboard';
 
       // Honor the returnUrl if user was trying to access a specific page
-      // But only if the API doesn't redirect to select-workspace (which takes priority)
-      if (data.redirectUrl === '/select-workspace') {
-        redirectUrl = '/select-workspace';
-      } else if (returnUrl && returnUrl !== '/dashboard') {
+      if (returnUrl && returnUrl !== '/dashboard') {
         redirectUrl = returnUrl;
       }
 

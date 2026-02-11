@@ -10,7 +10,6 @@ const PROTECTED_ROUTES = [
   '/dashboard',
   '/admin',
   '/reports',
-  '/select-workspace',
   '/profile',
   '/leads',
   '/pipeline',
@@ -132,7 +131,7 @@ const authMiddleware = defineMiddleware(async ({ cookies, locals, url, redirect 
  * - Redirects non-agency-admins away from /admin/* routes
  * - Redirects users without tenant context away from tenant-required routes
  */
-const rbacMiddleware = defineMiddleware(async ({ locals, url, redirect }, next) => {
+const rbacMiddleware = defineMiddleware(async ({ cookies, locals, url, redirect }, next) => {
   const pathname = url.pathname;
 
   // Skip RBAC checks for unauthenticated users (handled by auth middleware)
@@ -150,25 +149,24 @@ const rbacMiddleware = defineMiddleware(async ({ locals, url, redirect }, next) 
 
   // Check tenant-required routes (but not admin routes)
   if (isTenantRequiredRoute(pathname) && !isAgencyAdminRoute(pathname)) {
-    // Agency admins without tenant context should select a workspace
+    // Agency admins without tenant context go to admin dashboard
     if (locals.isAgencyAdmin && !locals.tenantId) {
-      return redirect('/select-workspace');
+      return redirect('/admin/dashboard');
     }
 
-    // Non-agency users without proper tenant context
+    // Non-agency users without proper tenant context - auto-select first tenant
     if (!locals.isAgencyAdmin && !locals.tenantId) {
-      // Check if user has exactly one tenant membership
       const tenantMemberships = locals.memberships?.filter((m) => m.tenantId !== null) || [];
 
-      if (tenantMemberships.length === 1) {
-        // Auto-redirect to the single tenant context would require setting cookie
-        // For now, redirect to workspace selection
-        return redirect('/select-workspace');
-      } else if (tenantMemberships.length > 1) {
-        return redirect('/select-workspace');
+      if (tenantMemberships.length >= 1) {
+        // Auto-select the first tenant
+        const firstTenantId = tenantMemberships[0].tenantId!;
+        cookies.set(TENANT_COOKIE_NAME, firstTenantId, { path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
+        locals.tenantId = firstTenantId;
+        return next();
       } else {
-        // No tenant memberships at all - this shouldn't happen normally
-        return redirect('/select-workspace');
+        // No tenant memberships - redirect to login
+        return redirect('/login');
       }
     }
   }

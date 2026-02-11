@@ -16,7 +16,6 @@ const PROTECTED_ROUTES = [
   '/dashboard',
   '/admin',
   '/reports',
-  '/select-workspace',
   '/profile',
   '/leads',
   '/pipeline',

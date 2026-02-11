@@ -133,10 +133,10 @@ describe('User Invite Flow Integration', () => {
       expect(roleRedirects['tenant_viewer']).toBe('/dashboard');
     });
 
-    it('handles multi-tenant user redirect to workspace selection', () => {
-      // Users with multiple tenant memberships should go to workspace selection
-      const multiTenantRedirect = '/select-workspace';
-      expect(multiTenantRedirect).toBe('/select-workspace');
+    it('handles multi-tenant user redirect to dashboard with auto-selected tenant', () => {
+      // Users with multiple tenant memberships auto-select first tenant and go to dashboard
+      const multiTenantRedirect = '/dashboard';
+      expect(multiTenantRedirect).toBe('/dashboard');
     });
   });
 

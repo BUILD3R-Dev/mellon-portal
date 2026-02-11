@@ -20,8 +20,8 @@ if (!user) {
 }
 
 if (!tenantId) {
-  // No tenant context selected - redirect to workspace selection
-  return Astro.redirect('/select-workspace');
+  // No tenant context selected - redirect to dashboard
+  return Astro.redirect('/dashboard');
 }
 
 // Verify user has access to this tenant
