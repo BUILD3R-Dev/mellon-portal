@@ -3,7 +3,7 @@
  * This module re-implements the core sync logic without importing
  * dotenv/config or node-cron, which can't be resolved by Vite.
  */
-import { eq, isNull, and } from 'drizzle-orm';
+import { eq, isNull, and, sql } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import {
   createClientTetherClient,
@@ -88,7 +88,8 @@ function parseSourceDate(dateStr?: string): Date | null {
 const PROSPECT_CONTACT_TYPE = '1';
 
 /**
- * Normalizes lead data into leadMetrics rows grouped by source, status, and time-window KPIs.
+ * Normalizes lead data into leadMetrics rows grouped by source and status.
+ * Time-window KPIs (new leads counts) are now derived at query time from the contacts table.
  */
 async function normalizeLeadMetrics(db: any, tenantId: string, leads: CTLeadResponse[]): Promise<number> {
   // Only include Prospects (contact_type "1") to match CT's pipeline view
@@ -116,47 +117,6 @@ async function normalizeLeadMetrics(db: any, tenantId: string, leads: CTLeadResp
   for (const [status, count] of byStatus) {
     rows.push({ tenantId, dimensionType: 'status', dimensionValue: status, leads: count });
   }
-
-  // Pre-compute time-window KPI metrics from contact creation dates.
-  // Counts ALL contacts (regardless of contact_type or stage) so the
-  // "New Leads" KPI reflects every contact added in the period.
-  const now = new Date();
-  const dayOfWeek = now.getUTCDay();
-  const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  const monday = new Date(now);
-  monday.setUTCDate(now.getUTCDate() - mondayOffset);
-  monday.setUTCHours(0, 0, 0, 0);
-
-  const rolling7Start = new Date(now);
-  rolling7Start.setUTCDate(now.getUTCDate() - 7);
-  rolling7Start.setUTCHours(0, 0, 0, 0);
-
-  const rolling30Start = new Date(now);
-  rolling30Start.setUTCDate(now.getUTCDate() - 30);
-  rolling30Start.setUTCHours(0, 0, 0, 0);
-
-  const rolling90Start = new Date(now);
-  rolling90Start.setUTCDate(now.getUTCDate() - 90);
-  rolling90Start.setUTCHours(0, 0, 0, 0);
-
-  let newThisWeek = 0;
-  let newRolling7 = 0;
-  let newRolling30 = 0;
-  let newRolling90 = 0;
-  for (const lead of leads) {
-    const createdDate = parseSourceDate(lead.created || lead.last_modified_date);
-    if (createdDate) {
-      if (createdDate >= monday) newThisWeek++;
-      if (createdDate >= rolling7Start) newRolling7++;
-      if (createdDate >= rolling30Start) newRolling30++;
-      if (createdDate >= rolling90Start) newRolling90++;
-    }
-  }
-
-  rows.push({ tenantId, dimensionType: 'new_this_week', dimensionValue: 'all', leads: newThisWeek });
-  rows.push({ tenantId, dimensionType: 'new_rolling_7', dimensionValue: 'all', leads: newRolling7 });
-  rows.push({ tenantId, dimensionType: 'new_rolling_30', dimensionValue: 'all', leads: newRolling30 });
-  rows.push({ tenantId, dimensionType: 'new_rolling_90', dimensionValue: 'all', leads: newRolling90 });
 
   if (rows.length > 0) {
     await db.insert(schema.leadMetrics).values(rows);
@@ -276,6 +236,66 @@ async function normalizeScheduledActivities(db: any, tenantId: string, activitie
 }
 
 /**
+ * Upserts individual contact records from CT leads into the contacts table.
+ */
+async function syncContacts(db: any, tenantId: string, leads: CTLeadResponse[]): Promise<number> {
+  if (leads.length === 0) return 0;
+
+  let upserted = 0;
+  // Process in batches to avoid huge single queries
+  const BATCH_SIZE = 100;
+  for (let i = 0; i < leads.length; i += BATCH_SIZE) {
+    const batch = leads.slice(i, i + BATCH_SIZE);
+    const rows = batch
+      .filter((lead) => lead.client_id)
+      .map((lead) => ({
+        tenantId,
+        externalId: lead.client_id,
+        firstName: lead.firstName || null,
+        lastName: lead.lastName || null,
+        email: lead.email || null,
+        phone: lead.phone || null,
+        company: lead.compName || null,
+        leadSource: lead.clients_lead_source || lead.source || null,
+        stage: lead.clients_sales_cycle || lead.status || null,
+        contactType: lead.contact_type || null,
+        dealSize: lead.deal_size || null,
+        assignedUser: lead.assigned_user || null,
+        sourceCreatedAt: parseSourceDate(lead.created),
+        sourceModifiedAt: parseSourceDate(lead.last_modified_date),
+        updatedAt: new Date(),
+      }));
+
+    if (rows.length > 0) {
+      await db
+        .insert(schema.contacts)
+        .values(rows)
+        .onConflictDoUpdate({
+          target: [schema.contacts.tenantId, schema.contacts.externalId],
+          set: {
+            firstName: sql`excluded.first_name`,
+            lastName: sql`excluded.last_name`,
+            email: sql`excluded.email`,
+            phone: sql`excluded.phone`,
+            company: sql`excluded.company`,
+            leadSource: sql`excluded.lead_source`,
+            stage: sql`excluded.stage`,
+            contactType: sql`excluded.contact_type`,
+            dealSize: sql`excluded.deal_size`,
+            assignedUser: sql`excluded.assigned_user`,
+            sourceCreatedAt: sql`excluded.source_created_at`,
+            sourceModifiedAt: sql`excluded.source_modified_at`,
+            updatedAt: sql`excluded.updated_at`,
+          },
+        });
+      upserted += rows.length;
+    }
+  }
+
+  return upserted;
+}
+
+/**
  * Stores a raw JSON snapshot from the API.
  */
 async function storeRawSnapshot(db: any, tenantId: string, endpoint: string, data: any): Promise<void> {
@@ -304,6 +324,7 @@ export async function syncTenant(db: any, tenant: TenantRecord): Promise<number>
   if (leadsResponse.data) {
     await storeRawSnapshot(db, tenant.id, '/leads', leadsResponse.data);
     totalRecords += await normalizeLeadMetrics(db, tenant.id, leadsResponse.data);
+    totalRecords += await syncContacts(db, tenant.id, leadsResponse.data);
   }
 
   // Fetch opportunities

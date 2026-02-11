@@ -6,8 +6,8 @@
  * and the PDF generation service.
  */
 
-import { db, pipelineStageCounts, leadMetrics, reportWeeks } from '@/lib/db';
-import { eq, and, isNull, isNotNull, desc, sql } from 'drizzle-orm';
+import { db, pipelineStageCounts, leadMetrics, reportWeeks, contacts } from '@/lib/db';
+import { eq, and, isNull, isNotNull, desc, sql, gte } from 'drizzle-orm';
 
 /**
  * Active pipeline stages in ClientTether pipeline order.
@@ -91,17 +91,18 @@ export interface LeadTrendPoint {
  * Gets KPI data for a tenant, optionally scoped to a specific report week.
  *
  * When reportWeekId is provided, queries snapshot data linked to that report week.
- * When omitted, queries live data (reportWeekId IS NULL).
+ * When omitted, queries live data by counting contacts created within the
+ * specified time window directly from the contacts table.
  *
  * @param tenantId - The tenant ID
  * @param reportWeekId - Optional report week ID for snapshot data
- * @param newLeadsDimension - Dimension type for new leads count (default 'new_rolling_7')
+ * @param days - Number of days to look back for new leads count (default 7)
  * @returns KPI data object
  */
 export async function getKPIData(
   tenantId: string,
   reportWeekId?: string,
-  newLeadsDimension: 'report-week' | 'new_rolling_7' | 'new_rolling_30' | 'new_rolling_90' = 'new_rolling_7'
+  days: number = 7
 ): Promise<KPIData> {
   if (reportWeekId) {
     // Snapshot mode: query data linked to the report week
@@ -134,20 +135,19 @@ export async function getKPIData(
     return calculateKPIs(newLeads, pipelineRows);
   }
 
-  // Live mode: read the pre-computed new leads count from the sync worker.
-  // The sync worker counts individual leads by their CT creation date,
-  // regardless of current pipeline stage.
-  const newLeadsDimensionType = newLeadsDimension === 'report-week' ? 'new_this_week' : newLeadsDimension;
+  // Live mode: count new leads directly from the contacts table
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+
   const newLeadsResult = await db
     .select({
-      totalLeads: sql<number>`coalesce(sum(${leadMetrics.leads}), 0)`,
+      totalLeads: sql<number>`coalesce(count(*), 0)`,
     })
-    .from(leadMetrics)
+    .from(contacts)
     .where(
       and(
-        eq(leadMetrics.tenantId, tenantId),
-        isNull(leadMetrics.reportWeekId),
-        eq(leadMetrics.dimensionType, newLeadsDimensionType)
+        eq(contacts.tenantId, tenantId),
+        gte(contacts.sourceCreatedAt, cutoff)
       )
     );
 
@@ -290,4 +290,48 @@ export async function getLeadTrends(
       source: weekLabel,
       leads,
     }));
+}
+
+/**
+ * Gets weekly lead trends by querying individual contacts from the contacts table.
+ *
+ * Groups contacts by the week of their source_created_at date, returning
+ * one data point per week with a formatted label (e.g., "Jan 13").
+ *
+ * @param tenantId - The tenant ID
+ * @param days - Number of days to look back (30 for month, 90 for quarter)
+ * @returns Array of lead trend points sorted chronologically
+ */
+export async function getLeadTrendsFromContacts(
+  tenantId: string,
+  days: number = 30
+): Promise<LeadTrendPoint[]> {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+
+  const rows = await db
+    .select({
+      weekStart: sql<string>`date_trunc('week', ${contacts.sourceCreatedAt})`,
+      leads: sql<number>`count(*)`,
+    })
+    .from(contacts)
+    .where(
+      and(
+        eq(contacts.tenantId, tenantId),
+        gte(contacts.sourceCreatedAt, cutoff)
+      )
+    )
+    .groupBy(sql`date_trunc('week', ${contacts.sourceCreatedAt})`)
+    .orderBy(sql`date_trunc('week', ${contacts.sourceCreatedAt})`);
+
+  return rows
+    .filter((row) => row.weekStart != null)
+    .map((row) => {
+      const d = new Date(row.weekStart);
+      const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return {
+        source: label,
+        leads: Number(row.leads),
+      };
+    });
 }

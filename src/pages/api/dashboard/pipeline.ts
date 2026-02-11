@@ -3,11 +3,11 @@
  *
  * Returns per-stage pipeline breakdown and weekly lead trend data
  * for the authenticated tenant user's dashboard charts.
- * Accepts a `weeks` query parameter (default 4) controlling historical data depth.
+ * Accepts a `period` query parameter (week | month | quarter) controlling historical data depth.
  */
 import type { APIRoute } from 'astro';
 import { validateSession, SESSION_COOKIE_NAME, getUserMemberships, TENANT_COOKIE_NAME } from '@/lib/auth';
-import { getPipelineByStage, getLeadTrends } from '@/lib/dashboard';
+import { getPipelineByStage, getLeadTrendsFromContacts } from '@/lib/dashboard';
 import type { PipelineByStagePoint, LeadTrendPoint } from '@/lib/dashboard';
 
 interface PipelineData {
@@ -92,18 +92,12 @@ export const GET: APIRoute = async ({ cookies, url }) => {
       });
     }
 
-    // Parse weeks query parameter
-    const weeksParam = url.searchParams.get('weeks');
-    let weeks = 4;
-    if (weeksParam) {
-      const parsed = parseInt(weeksParam, 10);
-      if (!isNaN(parsed) && parsed > 0) {
-        weeks = parsed;
-      }
-    }
+    // Parse period query parameter → map to days for lead trends
+    const periodParam = url.searchParams.get('period') as 'week' | 'month' | 'quarter' | null;
+    const days = periodParam === 'quarter' ? 90 : 30;
 
     const pipelineByStage = await getPipelineByStage(tenantId);
-    const leadTrends = await getLeadTrends(tenantId, weeks);
+    const leadTrends = await getLeadTrendsFromContacts(tenantId, days);
 
     const data: PipelineData = {
       pipelineByStage,

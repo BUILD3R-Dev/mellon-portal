@@ -254,6 +254,30 @@ export const tenantFieldMappings = pgTable('tenant_field_mappings', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+// Contacts Table (individual leads from ClientTether)
+export const contacts = pgTable('contacts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  externalId: varchar('external_id', { length: 100 }).notNull(),
+  firstName: varchar('first_name', { length: 255 }),
+  lastName: varchar('last_name', { length: 255 }),
+  email: varchar('email', { length: 255 }),
+  phone: varchar('phone', { length: 100 }),
+  company: varchar('company', { length: 255 }),
+  leadSource: varchar('lead_source', { length: 255 }),
+  stage: varchar('stage', { length: 100 }),
+  contactType: varchar('contact_type', { length: 50 }),
+  dealSize: decimal('deal_size', { precision: 12, scale: 2 }),
+  assignedUser: varchar('assigned_user', { length: 255 }),
+  sourceCreatedAt: timestamp('source_created_at'),
+  sourceModifiedAt: timestamp('source_modified_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => [
+  index('contacts_tenant_id_idx').on(table.tenantId),
+  uniqueIndex('contacts_tenant_external_id_idx').on(table.tenantId, table.externalId),
+]);
+
 // Feature Flags Table
 export const featureFlags = pgTable('feature_flags', {
   id: uuid('id').primaryKey().defaultRandom(),

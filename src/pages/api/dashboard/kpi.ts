@@ -87,17 +87,16 @@ export const GET: APIRoute = async ({ cookies, url }) => {
       });
     }
 
-    // Parse period query parameter and map to the live metric dimension type
+    // Parse period query parameter and map to days for contacts query
     const periodParam = url.searchParams.get('period') || 'week';
-    const PERIOD_TO_DIMENSION: Record<string, string> = {
-      week: 'new_rolling_7',
-      month: 'new_rolling_30',
-      quarter: 'new_rolling_90',
+    const PERIOD_TO_DAYS: Record<string, number> = {
+      week: 7,
+      month: 30,
+      quarter: 90,
     };
-    const timeWindow = PERIOD_TO_DIMENSION[periodParam] ? periodParam : 'week';
-    const dimensionType = PERIOD_TO_DIMENSION[timeWindow] as 'new_rolling_7' | 'new_rolling_30' | 'new_rolling_90';
+    const days = PERIOD_TO_DAYS[periodParam] ?? 7;
 
-    const data = await getKPIData(tenantId, undefined, dimensionType);
+    const data = await getKPIData(tenantId, undefined, days);
 
     const response: KPIResponse = {
       success: true,

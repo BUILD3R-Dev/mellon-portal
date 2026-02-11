@@ -36,12 +36,6 @@ const PERIOD_SUBTITLES: Record<Period, string> = {
   quarter: 'Past 90 days',
 };
 
-const PERIOD_CHART_WEEKS: Record<Period, number> = {
-  week: 4,
-  month: 4,
-  quarter: 13,
-};
-
 const PERIOD_STORAGE_KEY = 'dashboard-period';
 
 /**
@@ -122,12 +116,11 @@ export function DashboardIsland() {
   // Fetch pipeline data when period changes (chart weeks depend on period)
   React.useEffect(() => {
     let cancelled = false;
-    const chartWeeks = PERIOD_CHART_WEEKS[period];
 
     async function fetchPipeline() {
       setPipelineLoading(true);
       try {
-        const response = await fetch(`/api/dashboard/pipeline?weeks=${chartWeeks}`);
+        const response = await fetch(`/api/dashboard/pipeline?period=${period}`);
         const result = await response.json();
         if (!cancelled && result.success) {
           setPipelineData(result.data);

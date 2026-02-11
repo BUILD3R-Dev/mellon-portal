@@ -10,6 +10,7 @@ export {
   getKPIData,
   getPipelineByStage,
   getLeadTrends,
+  getLeadTrendsFromContacts,
   ACTIVE_PIPELINE_STAGES,
   isActiveStage,
   EARLY_FUNNEL_STAGES,
