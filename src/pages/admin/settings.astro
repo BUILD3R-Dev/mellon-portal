@@ -1,0 +1,104 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+
+// This page is protected by middleware
+const { user, memberships } = Astro.locals;
+
+// Verify user is agency admin
+const isAgencyAdmin = memberships?.some((m) => m.role === 'agency_admin' && m.tenantId === null);
+
+if (!isAgencyAdmin) {
+  return Astro.redirect('/dashboard');
+}
+
+// Read environment config (display-safe values only)
+const baseUrl = import.meta.env.BASE_URL || 'Not set';
+const dbConfigured = !!import.meta.env.DATABASE_URL;
+const sesRegion = import.meta.env.AWS_SES_REGION || 'Not configured';
+const sesFromEmail = import.meta.env.AWS_SES_FROM_EMAIL || 'Not configured';
+const sesConfigured = !!import.meta.env.AWS_SES_ACCESS_KEY;
+const ctApiUrl = import.meta.env.CLIENTTETHER_API_URL || 'Not configured';
+const ctConfigured = !!import.meta.env.CLIENTTETHER_ACCESS_TOKEN;
+---
+
+<DashboardLayout title="Settings">
+  <div class="space-y-8">
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900">Settings</h1>
+      <p class="mt-1 text-gray-600">System configuration and service status.</p>
+    </div>
+
+    <!-- Service Status -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4">Service Status</h2>
+      <div class="divide-y divide-gray-100">
+        <div class="flex items-center justify-between py-3">
+          <div>
+            <p class="font-medium text-gray-900">Database</p>
+            <p class="text-sm text-gray-500">PostgreSQL connection</p>
+          </div>
+          {dbConfigured ? (
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+              Connected
+            </span>
+          ) : (
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700">
+              <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+              Not configured
+            </span>
+          )}
+        </div>
+        <div class="flex items-center justify-between py-3">
+          <div>
+            <p class="font-medium text-gray-900">Email (AWS SES)</p>
+            <p class="text-sm text-gray-500">{sesConfigured ? `${sesFromEmail} via ${sesRegion}` : 'Credentials not set'}</p>
+          </div>
+          {sesConfigured ? (
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+              Configured
+            </span>
+          ) : (
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
+              <span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
+              Not configured
+            </span>
+          )}
+        </div>
+        <div class="flex items-center justify-between py-3">
+          <div>
+            <p class="font-medium text-gray-900">ClientTether API</p>
+            <p class="text-sm text-gray-500">{ctConfigured ? ctApiUrl : 'Credentials not set'}</p>
+          </div>
+          {ctConfigured ? (
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+              Configured
+            </span>
+          ) : (
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
+              <span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
+              Not configured
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+
+    <!-- Application Info -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4">Application</h2>
+      <div class="divide-y divide-gray-100">
+        <div class="flex items-center justify-between py-3">
+          <p class="text-sm text-gray-500">Base URL</p>
+          <p class="text-sm font-medium text-gray-900">{baseUrl}</p>
+        </div>
+        <div class="flex items-center justify-between py-3">
+          <p class="text-sm text-gray-500">Environment</p>
+          <p class="text-sm font-medium text-gray-900">{import.meta.env.PROD ? 'Production' : 'Development'}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</DashboardLayout>

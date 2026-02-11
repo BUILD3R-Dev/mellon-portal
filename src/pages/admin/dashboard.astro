@@ -1,7 +1,7 @@
 ---
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
-import { db, tenants, users, reportWeeks } from '@/lib/db';
-import { eq, and, gte, sql } from 'drizzle-orm';
+import { db, tenants, users } from '@/lib/db';
+import { eq, sql } from 'drizzle-orm';
 
 // This page is protected by middleware
 const { user, memberships } = Astro.locals;
@@ -18,23 +18,17 @@ if (!isAgencyAdmin) {
 let totalTenants = 0;
 let totalUsers = 0;
 let pendingInvites = 0;
-let reportsThisMonth = 0;
 
 try {
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  const [tenantCount, userCount, inviteCount, reportCount] = await Promise.all([
+  const [tenantCount, userCount, inviteCount] = await Promise.all([
     db.select({ count: sql<number>`count(*)::int` }).from(tenants).where(eq(tenants.status, 'active')),
     db.select({ count: sql<number>`count(*)::int` }).from(users).where(eq(users.status, 'active')),
     db.select({ count: sql<number>`count(*)::int` }).from(users).where(eq(users.status, 'pending')),
-    db.select({ count: sql<number>`count(*)::int` }).from(reportWeeks).where(gte(reportWeeks.createdAt, monthStart)),
   ]);
 
   totalTenants = tenantCount[0]?.count || 0;
   totalUsers = userCount[0]?.count || 0;
   pendingInvites = inviteCount[0]?.count || 0;
-  reportsThisMonth = reportCount[0]?.count || 0;
 } catch (error) {
   console.error('Error fetching admin stats:', error);
 }
@@ -50,7 +44,7 @@ try {
     </div>
 
     <!-- Admin Overview Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <p class="text-sm font-medium text-gray-500">Total Tenants</p>
         <p class="mt-2 text-3xl font-semibold text-gray-900">{totalTenants}</p>
@@ -66,17 +60,12 @@ try {
         <p class="mt-2 text-3xl font-semibold text-gray-900">{pendingInvites}</p>
         <p class="mt-1 text-sm text-gray-500">Awaiting acceptance</p>
       </div>
-      <div class="bg-white rounded-xl border border-gray-200 p-6">
-        <p class="text-sm font-medium text-gray-500">Reports Generated</p>
-        <p class="mt-2 text-3xl font-semibold text-gray-900">{reportsThisMonth}</p>
-        <p class="mt-1 text-sm text-gray-500">This month</p>
-      </div>
     </div>
 
     <!-- Quick Actions -->
     <div class="bg-white rounded-xl border border-gray-200 p-6">
       <h2 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <a
           href="/admin/tenants"
           class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-all"
@@ -103,20 +92,6 @@ try {
           <div>
             <p class="font-medium text-gray-900">Manage Users</p>
             <p class="text-sm text-gray-500">View and invite users</p>
-          </div>
-        </a>
-        <a
-          href="/admin/reports"
-          class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-all"
-        >
-          <div class="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-            <svg class="h-5 w-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <div>
-            <p class="font-medium text-gray-900">All Reports</p>
-            <p class="text-sm text-gray-500">View reports across tenants</p>
           </div>
         </a>
         <a
