@@ -3,11 +3,11 @@
  *
  * Returns all four KPI values for the authenticated tenant user's dashboard.
  * Queries from locally synced pipelineStageCounts and leadMetrics tables.
- * Accepts a `timeWindow` query parameter: 'report-week' (default) or 'rolling-7'.
+ * Accepts a `period` query parameter: 'week' (default), 'month', or 'quarter'.
  */
 import type { APIRoute } from 'astro';
 import { validateSession, SESSION_COOKIE_NAME, getUserMemberships, TENANT_COOKIE_NAME } from '@/lib/auth';
-import { getKPIData } from '@/lib/dashboard';
+import { getKPIData, getNewLeadsForPeriod } from '@/lib/dashboard';
 import type { KPIData } from '@/lib/dashboard';
 
 interface KPIResponse {
@@ -87,11 +87,22 @@ export const GET: APIRoute = async ({ cookies, url }) => {
       });
     }
 
-    // Parse timeWindow query parameter
-    const timeWindowParam = url.searchParams.get('timeWindow') || 'report-week';
-    const timeWindow = timeWindowParam === 'rolling-7' ? 'rolling-7' : 'report-week';
+    // Parse period query parameter
+    const periodParam = url.searchParams.get('period') || 'week';
+    const period = (['week', 'month', 'quarter'] as const).includes(periodParam as any)
+      ? (periodParam as 'week' | 'month' | 'quarter')
+      : 'week';
 
-    const data = await getKPIData(tenantId, undefined, timeWindow);
+    // For week, use live rolling-7-day data; for month/quarter, sum historical snapshots
+    let data: KPIData;
+    if (period === 'week') {
+      data = await getKPIData(tenantId, undefined, 'rolling-7');
+    } else {
+      const weeks = period === 'month' ? 4 : 13;
+      const liveData = await getKPIData(tenantId, undefined, 'rolling-7');
+      const periodNewLeads = await getNewLeadsForPeriod(tenantId, weeks);
+      data = { ...liveData, newLeads: periodNewLeads };
+    }
 
     const response: KPIResponse = {
       success: true,

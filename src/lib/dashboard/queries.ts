@@ -7,7 +7,7 @@
  */
 
 import { db, pipelineStageCounts, leadMetrics, reportWeeks } from '@/lib/db';
-import { eq, and, isNull, isNotNull, desc, sql } from 'drizzle-orm';
+import { eq, and, isNull, isNotNull, desc, sql, inArray } from 'drizzle-orm';
 
 /**
  * Active pipeline stages in ClientTether pipeline order.
@@ -245,10 +245,54 @@ export async function getPipelineByStage(
 }
 
 /**
- * Gets lead trend data for a tenant, showing historical weekly lead counts.
+ * Gets the total new leads across the last N report week snapshots.
  *
- * Queries leadMetrics rows with a non-null reportWeekId, joined with
- * reportWeeks to get the weekEndingDate as a label.
+ * Queries leadMetrics rows with dimensionType='new_this_week' and
+ * dimensionValue='all', joined with reportWeeks, ordered by most recent,
+ * limited to the last `weeks` snapshots, and sums the leads column.
+ *
+ * @param tenantId - The tenant ID
+ * @param weeks - Number of historical weeks to sum (e.g. 4 for month, 13 for quarter)
+ * @returns Total new leads across the period
+ */
+export async function getNewLeadsForPeriod(
+  tenantId: string,
+  weeks: number
+): Promise<number> {
+  // First get the most recent N report week IDs for this tenant
+  const recentWeeks = await db
+    .select({ id: reportWeeks.id })
+    .from(reportWeeks)
+    .where(eq(reportWeeks.tenantId, tenantId))
+    .orderBy(desc(reportWeeks.weekEndingDate))
+    .limit(weeks);
+
+  if (recentWeeks.length === 0) return 0;
+
+  const weekIds = recentWeeks.map((w) => w.id);
+
+  const result = await db
+    .select({
+      totalLeads: sql<number>`coalesce(sum(${leadMetrics.leads}), 0)`,
+    })
+    .from(leadMetrics)
+    .where(
+      and(
+        eq(leadMetrics.tenantId, tenantId),
+        eq(leadMetrics.dimensionType, 'new_this_week'),
+        eq(leadMetrics.dimensionValue, 'all'),
+        inArray(leadMetrics.reportWeekId, weekIds)
+      )
+    );
+
+  return Number(result[0]?.totalLeads ?? 0);
+}
+
+/**
+ * Gets lead trend data for a tenant, showing historical weekly new lead counts.
+ *
+ * Queries leadMetrics rows with dimensionType='new_this_week' and a non-null
+ * reportWeekId, joined with reportWeeks to get the weekEndingDate as a label.
  *
  * @param tenantId - The tenant ID
  * @param weeks - Number of historical weeks to include (default 4)
@@ -268,7 +312,8 @@ export async function getLeadTrends(
     .where(
       and(
         eq(leadMetrics.tenantId, tenantId),
-        isNotNull(leadMetrics.reportWeekId)
+        isNotNull(leadMetrics.reportWeekId),
+        eq(leadMetrics.dimensionType, 'new_this_week')
       )
     )
     .orderBy(desc(reportWeeks.weekEndingDate))

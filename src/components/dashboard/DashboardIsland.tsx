@@ -2,7 +2,7 @@
  * DashboardIsland component
  *
  * Parent React island component that coordinates all dashboard interactivity.
- * Manages KPI data fetching, time window toggle, chart data, and renders
+ * Manages KPI data fetching, period selector, chart data, and renders
  * KPICard, LeadsChart, and HorizontalBarChart child components.
  */
 import * as React from 'react';
@@ -10,7 +10,7 @@ import { KPICard } from './KPICard';
 import { LeadsChart, type LeadsChartDataPoint } from './LeadsChart';
 import { HorizontalBarChart, type HorizontalBarChartDataPoint } from './HorizontalBarChart';
 
-type TimeWindow = 'report-week' | 'rolling-7';
+type Period = 'week' | 'month' | 'quarter';
 
 interface KPIData {
   newLeads: number;
@@ -24,11 +24,25 @@ interface PipelineData {
   leadTrends: LeadsChartDataPoint[];
 }
 
-const CHART_RANGE_OPTIONS = [
-  { label: '4 weeks', value: 4 },
+const PERIOD_OPTIONS: { label: string; value: Period }[] = [
+  { label: 'Past Week', value: 'week' },
+  { label: 'Past Month', value: 'month' },
+  { label: 'Past Quarter', value: 'quarter' },
 ];
 
-const TIME_WINDOW_STORAGE_KEY = 'dashboard-time-window';
+const PERIOD_SUBTITLES: Record<Period, string> = {
+  week: 'Past 7 days',
+  month: 'Past 4 weeks',
+  quarter: 'Past 13 weeks',
+};
+
+const PERIOD_CHART_WEEKS: Record<Period, number> = {
+  week: 4,
+  month: 4,
+  quarter: 13,
+};
+
+const PERIOD_STORAGE_KEY = 'dashboard-period';
 
 /**
  * Formats a dollar value string as a US currency display.
@@ -45,50 +59,49 @@ function formatDollarAmount(value: string): string {
 }
 
 /**
- * Reads the persisted time window preference from localStorage.
+ * Reads the persisted period preference from localStorage.
  */
-function getStoredTimeWindow(): TimeWindow {
+function getStoredPeriod(): Period {
   try {
-    const stored = localStorage.getItem(TIME_WINDOW_STORAGE_KEY);
-    if (stored === 'rolling-7') return 'rolling-7';
+    const stored = localStorage.getItem(PERIOD_STORAGE_KEY);
+    if (stored === 'month' || stored === 'quarter') return stored;
   } catch {
     // localStorage may be unavailable in some environments
   }
-  return 'report-week';
+  return 'week';
 }
 
 /**
- * Persists the time window preference to localStorage.
+ * Persists the period preference to localStorage.
  */
-function storeTimeWindow(value: TimeWindow): void {
+function storePeriod(value: Period): void {
   try {
-    localStorage.setItem(TIME_WINDOW_STORAGE_KEY, value);
+    localStorage.setItem(PERIOD_STORAGE_KEY, value);
   } catch {
     // localStorage may be unavailable in some environments
   }
 }
 
 export function DashboardIsland() {
-  const [timeWindow, setTimeWindow] = React.useState<TimeWindow>('report-week');
-  const [chartWeeks, setChartWeeks] = React.useState<number>(4);
+  const [period, setPeriod] = React.useState<Period>('week');
   const [kpiLoading, setKpiLoading] = React.useState(true);
   const [pipelineLoading, setPipelineLoading] = React.useState(true);
   const [kpiData, setKpiData] = React.useState<KPIData | null>(null);
   const [pipelineData, setPipelineData] = React.useState<PipelineData | null>(null);
 
-  // On mount, read persisted time window
+  // On mount, read persisted period
   React.useEffect(() => {
-    setTimeWindow(getStoredTimeWindow());
+    setPeriod(getStoredPeriod());
   }, []);
 
-  // Fetch KPI data when timeWindow changes
+  // Fetch KPI data when period changes
   React.useEffect(() => {
     let cancelled = false;
 
     async function fetchKPI() {
       setKpiLoading(true);
       try {
-        const response = await fetch(`/api/dashboard/kpi?timeWindow=${timeWindow}`);
+        const response = await fetch(`/api/dashboard/kpi?period=${period}`);
         const result = await response.json();
         if (!cancelled && result.success) {
           setKpiData(result.data);
@@ -104,11 +117,12 @@ export function DashboardIsland() {
 
     fetchKPI();
     return () => { cancelled = true; };
-  }, [timeWindow]);
+  }, [period]);
 
-  // Fetch pipeline data when chartWeeks changes
+  // Fetch pipeline data when period changes (chart weeks depend on period)
   React.useEffect(() => {
     let cancelled = false;
+    const chartWeeks = PERIOD_CHART_WEEKS[period];
 
     async function fetchPipeline() {
       setPipelineLoading(true);
@@ -129,48 +143,29 @@ export function DashboardIsland() {
 
     fetchPipeline();
     return () => { cancelled = true; };
-  }, [chartWeeks]);
+  }, [period]);
 
-  function handleTimeWindowChange(value: TimeWindow) {
-    setTimeWindow(value);
-    storeTimeWindow(value);
+  function handlePeriodChange(value: Period) {
+    setPeriod(value);
+    storePeriod(value);
   }
-
-  function handleChartWeeksChange(value: number) {
-    setChartWeeks(value);
-  }
-
-  const newLeadsSubtitle = timeWindow === 'rolling-7' ? 'Past 7 days' : 'Current report week';
 
   return (
     <div className="space-y-8">
-      {/* Time Window Toggle */}
+      {/* Period Selector */}
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-600 mr-2">Time window:</span>
-        <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
-          <button
-            type="button"
-            onClick={() => handleTimeWindowChange('report-week')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              timeWindow === 'report-week'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Current Report Week
-          </button>
-          <button
-            type="button"
-            onClick={() => handleTimeWindowChange('rolling-7')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              timeWindow === 'rolling-7'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Rolling 7 Days
-          </button>
-        </div>
+        <span className="text-sm font-medium text-gray-600 mr-2">Time period:</span>
+        <select
+          value={period}
+          onChange={(e) => handlePeriodChange(e.target.value as Period)}
+          className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {PERIOD_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* KPI Cards */}
@@ -178,7 +173,7 @@ export function DashboardIsland() {
         <KPICard
           label="New Leads"
           value={kpiData ? String(kpiData.newLeads) : '--'}
-          subtitle={newLeadsSubtitle}
+          subtitle={PERIOD_SUBTITLES[period]}
           loading={kpiLoading}
         />
         <KPICard
@@ -199,22 +194,6 @@ export function DashboardIsland() {
           subtitle="All pipeline stages"
           loading={kpiLoading}
         />
-      </div>
-
-      {/* Chart Time Range Selector */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-600 mr-2">Chart range:</span>
-        <select
-          value={chartWeeks}
-          onChange={(e) => handleChartWeeksChange(Number(e.target.value))}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          {CHART_RANGE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
       </div>
 
       {/* Charts */}

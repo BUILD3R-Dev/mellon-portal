@@ -124,7 +124,7 @@ describe('DashboardIsland', () => {
     expect(screen.getByText('Weighted Pipeline Value')).toBeInTheDocument();
   });
 
-  it('toggling time window triggers a re-fetch of KPI data with updated timeWindow parameter', async () => {
+  it('changing period triggers a re-fetch of KPI data with updated period parameter', async () => {
     mockFetch.mockImplementation((url: string) => {
       if (url.includes('/api/dashboard/kpi')) {
         return Promise.resolve({
@@ -148,11 +148,11 @@ describe('DashboardIsland', () => {
       expect(screen.getByText('12')).toBeInTheDocument();
     });
 
-    // Initial fetch should use report-week
+    // Initial fetch should use period=week
     const initialKpiCall = mockFetch.mock.calls.find(
       (call: string[]) => typeof call[0] === 'string' && call[0].includes('/api/dashboard/kpi')
     );
-    expect(initialKpiCall?.[0]).toContain('timeWindow=report-week');
+    expect(initialKpiCall?.[0]).toContain('period=week');
 
     // Clear mock to track new calls
     mockFetch.mockClear();
@@ -172,22 +172,23 @@ describe('DashboardIsland', () => {
       return Promise.reject(new Error('Unknown URL'));
     });
 
-    // Click "Rolling 7 Days" toggle
-    fireEvent.click(screen.getByText('Rolling 7 Days'));
+    // Change period to "Past Quarter"
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: 'quarter' } });
 
-    // Should re-fetch with rolling-7 parameter
+    // Should re-fetch with period=quarter
     await waitFor(() => {
-      const rolling7Call = mockFetch.mock.calls.find(
+      const quarterCall = mockFetch.mock.calls.find(
         (call: string[]) => typeof call[0] === 'string' && call[0].includes('/api/dashboard/kpi')
       );
-      expect(rolling7Call?.[0]).toContain('timeWindow=rolling-7');
+      expect(quarterCall?.[0]).toContain('period=quarter');
     });
 
     // Should persist to localStorage
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('dashboard-time-window', 'rolling-7');
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('dashboard-period', 'quarter');
   });
 
-  it('chart time range selector re-fetches pipeline data with updated weeks parameter', async () => {
+  it('changing period to quarter re-fetches pipeline data with weeks=13', async () => {
     mockFetch.mockImplementation((url: string) => {
       if (url.includes('/api/dashboard/kpi')) {
         return Promise.resolve({
@@ -235,12 +236,16 @@ describe('DashboardIsland', () => {
       return Promise.reject(new Error('Unknown URL'));
     });
 
-    // Change chart range selector
+    // Change period to quarter
     const select = screen.getByRole('combobox');
-    fireEvent.change(select, { target: { value: '4' } });
+    fireEvent.change(select, { target: { value: 'quarter' } });
 
-    // The default value is already 4, so the effect should still have been triggered with weeks=4
-    // Verify the select renders with the correct value
-    expect(select).toHaveValue('4');
+    // Should re-fetch pipeline with weeks=13
+    await waitFor(() => {
+      const quarterPipelineCall = mockFetch.mock.calls.find(
+        (call: string[]) => typeof call[0] === 'string' && call[0].includes('/api/dashboard/pipeline')
+      );
+      expect(quarterPipelineCall?.[0]).toContain('weeks=13');
+    });
   });
 });

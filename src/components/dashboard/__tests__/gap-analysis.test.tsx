@@ -115,24 +115,25 @@ describe('Gap Analysis: DashboardIsland', () => {
     expect(screen.getByText('Lead Trends')).toBeInTheDocument();
     expect(screen.getByText('Pipeline by Stage')).toBeInTheDocument();
 
-    // Toggle to Rolling 7 Days
-    fireEvent.click(screen.getByText('Rolling 7 Days'));
+    // Change period to month via the select dropdown
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: 'month' } });
 
-    // Verify re-fetch happened with rolling-7 parameter
+    // Verify re-fetch happened with period=month parameter
     await waitFor(() => {
-      const rolling7Call = mockFetch.mock.calls.find(
-        (call: string[]) => typeof call[0] === 'string' && call[0].includes('timeWindow=rolling-7')
+      const monthCall = mockFetch.mock.calls.find(
+        (call: string[]) => typeof call[0] === 'string' && call[0].includes('period=month')
       );
-      expect(rolling7Call).toBeDefined();
+      expect(monthCall).toBeDefined();
     });
 
-    // Wait for rolling-7 data to display
+    // Wait for month data to display
     await waitFor(() => {
       expect(screen.getByText('8')).toBeInTheDocument();
     });
   });
 
-  it('time window toggle updates localStorage and the subtitle on the New Leads KPI card', async () => {
+  it('period selector updates localStorage and the subtitle on the New Leads KPI card', async () => {
     mockFetch.mockImplementation((url: string) => {
       if (url.includes('/api/dashboard/kpi')) {
         return Promise.resolve({
@@ -156,29 +157,30 @@ describe('Gap Analysis: DashboardIsland', () => {
       expect(screen.getByText('12')).toBeInTheDocument();
     });
 
-    // Default subtitle should be "Current report week"
-    expect(screen.getByText('Current report week')).toBeInTheDocument();
+    // Default subtitle should be "Past 7 days"
+    expect(screen.getByText('Past 7 days')).toBeInTheDocument();
 
-    // Toggle to Rolling 7 Days
-    fireEvent.click(screen.getByText('Rolling 7 Days'));
+    // Change to Past Quarter
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: 'quarter' } });
 
     // Verify localStorage was updated
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('dashboard-time-window', 'rolling-7');
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('dashboard-period', 'quarter');
 
-    // Subtitle should change to "Past 7 days"
+    // Subtitle should change to "Past 13 weeks"
     await waitFor(() => {
-      expect(screen.getByText('Past 7 days')).toBeInTheDocument();
+      expect(screen.getByText('Past 13 weeks')).toBeInTheDocument();
     });
 
-    // Toggle back to Current Report Week
-    fireEvent.click(screen.getByText('Current Report Week'));
+    // Change to Past Month
+    fireEvent.change(select, { target: { value: 'month' } });
 
     // Verify localStorage updated again
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('dashboard-time-window', 'report-week');
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('dashboard-period', 'month');
 
-    // Subtitle should change back
+    // Subtitle should change to "Past 4 weeks"
     await waitFor(() => {
-      expect(screen.getByText('Current report week')).toBeInTheDocument();
+      expect(screen.getByText('Past 4 weeks')).toBeInTheDocument();
     });
   });
 });
